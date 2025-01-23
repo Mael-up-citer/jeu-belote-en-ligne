@@ -12,13 +12,13 @@
             <Font size="18.0" />
          </font>
       </Label>
-      <Label id="errorLabel" fx:id="errorLabel" layoutX="174.0" layoutY="134.0" text="Erreur de connecion avec le serveur" textFill="#eb1111">
+      <Label id="errorLabel" fx:id="errorLabel" layoutX="174.0" layoutY="134.0" textFill="#1e1d1d">
          <font>
             <Font size="18.0" />
          </font>
       </Label>
       <Button fx:id="createGameButton" layoutX="129.0" layoutY="200.0" mnemonicParsing="false" text="Créer une partie" />
-      <Button fx:id="joinGameButton" layoutX="405.0" layoutY="201.0" mnemonicParsing="false" text="Rejoindre une partie" />
+      <Button fx:id="joinGameButton" layoutX="344.0" layoutY="200.0" mnemonicParsing="false" text="Rejoindre une partie" />
       <Button fx:id="quitButton" layoutX="273.0" layoutY="301.0" mnemonicParsing="false" text="Quitter" />
    </children>
 </AnchorPane>

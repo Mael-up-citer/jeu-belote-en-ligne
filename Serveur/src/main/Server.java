@@ -82,10 +82,10 @@ public class Server {
                                 out.println("Erreur: Nombre d'humains invalide.");
                             }
                         }
-                        else {
+                        else
                             out.println("Erreur: Mauvais format de commande.");
-                        }
-                    } else if (input.startsWith("join_game")) {
+                    }
+                    else if (input.startsWith("join_game")) {
                         // Commande pour rejoindre une partie existante
                         String[] parts = input.split(" ");
 
@@ -95,6 +95,9 @@ public class Server {
                         else
                             out.println("Erreur: Mauvais format de commande.");
                     }
+                    // TODO a supprimer plus tard
+                    else
+                        System.out.println(input);
                 }
             } catch (IOException e) {
                 e.printStackTrace();

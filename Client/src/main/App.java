@@ -5,21 +5,22 @@ import GUI.Loby.LobyGui;
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.stage.Stage;
-
+import javafx.scene.Scene;
+import javafx.scene.layout.Pane;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Alert.AlertType;
 import javafx.scene.control.ButtonType;
 import java.util.Timer;
 import java.util.TimerTask;
 
-
 public class App extends Application {
 
-    private static final int MAX_RETRIES = 5; // Max retries before showing the error
-    private static final int RETRY_INTERVAL_MS = 3000; // Retry every 3 seconds
-    private static int retryCount = 0;
+    private static final int MAX_RETRIES = 5; // Nombre maximal de tentatives avant d'afficher l'erreur
+    private static final int RETRY_INTERVAL_MS = 3000; // Intervalle de réessai toutes les 3 secondes
+    private static int retryCount = 0;  // Compteur des tentatives
 
-    private static ServerConnection serverConnection;
+    private static ServerConnection serverConnection; // Référence Singleton
+    private LobyGui lobyGui; // Déclare lobyGui comme variable d'instance
 
     public static void main(String[] args) {
         launch(args);
@@ -27,8 +28,13 @@ public class App extends Application {
 
     @Override
     public void start(Stage primaryStage) {
-        // Créer l'objet ServerConnection
-        serverConnection = new ServerConnection(new ServerConnection.ConnectionListener() {
+        lobyGui = new LobyGui(primaryStage); // Initialiser lobyGui ici
+
+        // Obtenir l'instance Singleton de ServerConnection
+        serverConnection = ServerConnection.getInstance();
+
+        // Configurer le ConnectionListener
+        serverConnection.setListener(new ServerConnection.ConnectionListener() {
             @Override
             public void onServerMessage(String message) {
                 System.out.println("Message reçu du serveur : " + message);
@@ -44,18 +50,16 @@ public class App extends Application {
             @Override
             public void onDisconnected() {
                 System.out.println("Déconnecté du serveur.");
-                Platform.runLater(() -> LobyGui.getInstance().showServerMessage("Déconnecté du serveur."));
+                Platform.runLater(() -> lobyGui.showServerMessage("Déconnecté du serveur."));
             }
         });
 
-        // Créer l'instance de la GUI et la montrer
-        LobyGui lobyGui = new LobyGui(primaryStage);
         primaryStage.setTitle("Lobby du jeu");
 
         // Tentative de connexion immédiate
         attemptConnection();
 
-        // Lancer la scène
+        // Créer et afficher la scène
         primaryStage.show();
     }
 
@@ -67,12 +71,16 @@ public class App extends Application {
         // Tenter de se connecter
         if (serverConnection.connect()) {
             // Si la connexion réussie, passer la référence du serveur à la GUI
-            Platform.runLater(() -> LobyGui.setServerConnection(serverConnection));
-        }
-        else {
+            Platform.runLater(() -> {
+                LobyGui.setServeurConnection(serverConnection);
+                // Réinitialiser la GUI (désactiver le label d'erreur et réactiver les composants)
+                lobyGui.resetGui();
+            });
+        } else {
             retryCount++;
+            // Si le nombre max d'essaie est atteint
             if (retryCount >= MAX_RETRIES)
-                showConnectionFailureAlert();
+                showConnectionFailureAlert();   // Abandonner et notifier
             else {
                 // Si la connexion échoue, réessayer toutes les X secondes
                 new Timer().schedule(new TimerTask() {

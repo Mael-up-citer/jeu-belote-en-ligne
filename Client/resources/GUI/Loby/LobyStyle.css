@@ -20,16 +20,8 @@
     -fx-background-color: #227736; /* Couleur encore plus foncée quand on clique */
 }
 
-/* Masquer complètement le label d'erreur */
 #errorLabel {
-    -fx-opacity: 0; /* Rendre l'élément transparent mais garder l'espace */
-    -fx-pref-width: 0; /* Facultatif : réduire la largeur à 0 si tu veux qu'il ne prenne pas de place */
-    -fx-pref-height: 0; /* Facultatif : réduire la hauteur à 0 */
-}
-
-/* Si tu veux supprimer complètement le label d'erreur (et qu'il ne prenne aucun espace) */
-#errorLabel.hidden {
-    -fx-pref-width: 0;
-    -fx-pref-height: 0;
-    -fx-opacity: 0;
+    -fx-text-fill: red; /* Couleur du texte d'erreur */
+    -fx-font-size: 14px; /* Taille du texte */
+    -fx-padding: 5px; /* Espacement autour du texte */
 }
