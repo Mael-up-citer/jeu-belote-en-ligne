@@ -1,0 +1,35 @@
+/* Style général pour les boutons */
+.button {
+    -fx-background-color: #23863a; /* Vert classique */
+    -fx-text-fill: white; /* Texte en blanc */
+    -fx-font-size: 14px; /* Taille de la police */
+    -fx-padding: 10px 15px; /* Espacement interne */
+    -fx-border-radius: 5px; /* Bords arrondis */
+    -fx-background-radius: 5px; /* Fonds arrondis */
+    -fx-border-color: transparent; /* Pas de bordure visible */
+    -fx-border-width: 0; /* Aucune bordure */
+}
+
+/* Effet au survol du bouton */
+.button:hover {
+    -fx-background-color: #3ea755; /* Couleur légèrement plus foncée au survol */
+}
+
+/* Effet lorsque le bouton est pressé */
+.button:pressed {
+    -fx-background-color: #227736; /* Couleur encore plus foncée quand on clique */
+}
+
+/* Masquer complètement le label d'erreur */
+#errorLabel {
+    -fx-opacity: 0; /* Rendre l'élément transparent mais garder l'espace */
+    -fx-pref-width: 0; /* Facultatif : réduire la largeur à 0 si tu veux qu'il ne prenne pas de place */
+    -fx-pref-height: 0; /* Facultatif : réduire la hauteur à 0 */
+}
+
+/* Si tu veux supprimer complètement le label d'erreur (et qu'il ne prenne aucun espace) */
+#errorLabel.hidden {
+    -fx-pref-width: 0;
+    -fx-pref-height: 0;
+    -fx-opacity: 0;
+}
