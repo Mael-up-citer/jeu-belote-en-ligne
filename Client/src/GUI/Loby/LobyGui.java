@@ -17,17 +17,17 @@ public class LobyGui {
         try {
             // Charger le fichier FXML et lier le contrôleur
             FXMLLoader loader = new FXMLLoader(getClass().getResource("/GUI/Loby/LobyGui.fxml"));
-            
+
             // Charger le root pane et obtenir le contrôleur
             Pane root = loader.load();
             controller = loader.getController();  // Obtenir l'instance du contrôleur
-            
+
             // Créer la scène avec le root node
             Scene scene = new Scene(root);
             primaryStage.setTitle("Lobby");
             primaryStage.setScene(scene);
             primaryStage.show();
-            
+
         } catch (Exception e) {
             e.printStackTrace();
         }

@@ -54,8 +54,7 @@ public class LobyGuiController {
      */
     @FXML
     private void startNewGame() {
-        System.out.println("cree partie");
-        serverConnection.sendToServer("hello world");
+        serverConnection.sendToServer("create_game, 4");
         // Ajouter la logique pour démarrer une nouvelle partie
     }
 

@@ -37,7 +37,6 @@ public class App extends Application {
         serverConnection.setListener(new ServerConnection.ConnectionListener() {
             @Override
             public void onServerMessage(String message) {
-                System.out.println("Message reçu du serveur : " + message);
                 Platform.runLater(() -> lobyGui.showServerMessage(message));
             }
 
