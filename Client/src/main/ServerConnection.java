@@ -4,207 +4,174 @@ import java.io.*;
 import java.net.Socket;
 
 /**
- * La classe ServerConnection gère la connexion client-serveur via un modèle Singleton.
- * Elle offre une interface simple pour établir, envoyer et recevoir des messages,
- * tout en notifiant les événements grâce à un ConnectionListener.
+ * Classe gérant la connexion client-serveur.
+ * Cette classe est responsable d'établir, maintenir et gérer une connexion avec le serveur.
+ * Elle utilise l'EventManager pour publier des événements en réponse à diverses actions (connexion, réception de messages, déconnexion, etc.).
+ *
+ * Singleton : Une seule instance de cette classe est autorisée pour garantir une gestion centralisée de la connexion.
  */
 public class ServerConnection {
 
-    // Constantes pour la connexion
-    private static final int PORT = 12345;  // Port sur lequel le serveur écoute
-    private static final String HOST = "127.0.0.1";  // Adresse IP du serveur (localhost pour ce cas)
+    // Port et adresse du serveur
+    private static final int PORT = 12345;
+    private static final String HOST = "127.0.0.1";
 
-    private static ServerConnection instance; // Instance unique (Singleton)
+    // Instance unique pour le singleton
+    private static ServerConnection instance;
+    private ConnectionListener listener;  // Référence au listener
 
-    private Socket socket;  // Socket utilisé pour communiquer avec le serveur
-    private BufferedReader in;  // Flux entrant
-    private PrintWriter out;  // Flux sortant
-    private ConnectionListener listener;  // Listener pour les événements liés à la connexion
-    private boolean isConnected = false;  // Indicateur d'état de connexion
+    // Socket et flux de communication
+    private Socket socket;
+    private BufferedReader in;
+    private PrintWriter out;
+    private boolean isConnected = false; // Indique si une connexion est active
 
-    /**
-     * Interface permettant de notifier des événements liés à la connexion.
-     */
-    public interface ConnectionListener {
-        void onServerMessage(String message); // Message reçu
-        void onConnectionError(String error); // Erreur de connexion
-        void onDisconnected();               // Déconnexion
+    // Gestionnaire d'événements
+    private EventManager eventManager;
+       // Ajout d'une interface pour le listener
+       public interface ConnectionListener {
+        void onServerMessage(String message);
+        void onConnectionError(String error);
+        void onDisconnected();
     }
 
     /**
-     * Constructeur privé (Singleton).
+     * Constructeur privé pour le pattern Singleton.
+     *
+     * @param eventManager L'EventManager utilisé pour publier les événements.
      */
-    private ServerConnection() {
-        // Constructeur privé pour éviter l'instanciation directe
+    private ServerConnection(EventManager eventManager) {
+        this.eventManager = eventManager;
     }
 
     /**
-     * Retourne l'instance unique de ServerConnection.
-     * 
-     * @return L'instance unique de ServerConnection
+     * Récupère l'instance unique de ServerConnection.
+     * Si l'instance n'existe pas encore, elle est créée.
+     *
+     * @param eventManager L'EventManager utilisé pour gérer les événements (nécessaire lors de la première initialisation).
+     * @return L'instance unique de ServerConnection.
      */
-    public static ServerConnection getInstance() {
+    public static ServerConnection getInstance(EventManager eventManager) {
         if (instance == null)
-            instance = new ServerConnection();
+            instance = new ServerConnection(eventManager);
 
         return instance;
     }
 
     /**
-     * Initialise le listener pour recevoir les notifications d'événements.
-     * 
-     * @param listener Un objet implémentant ConnectionListener
-     */
-    public void setListener(ConnectionListener listener) {
-        this.listener = listener;
-    }
-
-    /**
-     * Établit la connexion avec le serveur.
-     * 
-     * @return true si la connexion a réussi, false sinon
+     * Établit une connexion avec le serveur.
+     * Si la connexion est déjà établie, elle n'est pas recréée.
+     * En cas de succès, un événement "server:connected" est publié.
+     * En cas d'échec, un événement "server:connection_error" est publié avec les détails de l'erreur.
+     *
+     * @return true si la connexion a réussi, false en cas d'erreur.
      */
     public boolean connect() {
         if (isConnected) {
-            log("Déjà connecté au serveur.");
+            System.out.println("Déjà connecté.");
             return true;
         }
 
         try {
-            // Connexion au serveur
+            // Initialisation de la connexion
             socket = new Socket(HOST, PORT);
             in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
             out = new PrintWriter(socket.getOutputStream(), true);
             isConnected = true;
 
-            log("Connecté au serveur : " + HOST + ":" + PORT);
+            System.out.println("Connecté au serveur : " + HOST + ":" + PORT);
 
-            // Lancer un thread pour écouter les messages du serveur
+            // Lancer un thread pour écouter les messages entrants du serveur
             new Thread(this::listenToServer).start();
+
+            // Publier un événement de connexion réussie
+            eventManager.publish("server:connected", null);
             return true;
         } catch (IOException e) {
-            notifyConnectionError("Erreur de connexion : " + e.getMessage());
+            // Publier un événement d'erreur de connexion avec le message d'erreur
+            eventManager.publish("server:connection_error", e.getMessage());
             return false;
         }
     }
 
     /**
-     * Écoute les messages entrants du serveur et les transmet au listener.
+     * Écoute en continu les messages provenant du serveur dans un thread séparé.
+     * Chaque message reçu est publié sous l'événement "server:message_received".
+     * En cas de déconnexion ou d'erreur, un événement "server:disconnected" est publié.
      */
     private void listenToServer() {
         try {
-            String message; // Message du serveur
-
-            // Tq la connexion est effective
+            String message;
+            // Lecture des messages envoyés par le serveur
             while ((message = in.readLine()) != null) {
-                if (listener != null)
-                    listener.onServerMessage(message);
+                eventManager.publish("server:message_received", message);
             }
         } catch (IOException e) {
-            notifyDisconnection();
+            // Gérer la déconnexion
+            eventManager.publish("server:disconnected", null);
+            cleanupResources();
         }
     }
 
     /**
      * Envoie un message au serveur.
-     * 
-     * @param message Le message à envoyer
+     * Si la connexion n'est pas établie, un message d'erreur est affiché.
+     *
+     * @param message Le message à envoyer au serveur.
      */
     public void sendToServer(String message) {
         if (isConnected && out != null) {
             out.println(message);
-            log("Message envoyé : " + message);
+            System.out.println("Message envoyé : " + message);
+        } else {
+            System.out.println("Connexion non établie. Impossible d'envoyer le message.");
         }
-        else
-            logError("Impossible d'envoyer le message, connexion non établie.");
     }
 
     /**
-     * Ferme la connexion avec le serveur et libère les ressources.
+     * Déconnecte la connexion actuelle avec le serveur.
+     * Ferme le socket et les flux, et publie un événement "server:disconnected".
      */
     public void disconnect() {
         try {
             if (socket != null && !socket.isClosed()) {
                 socket.close();
             }
-            log("Déconnexion réussie.");
+            System.out.println("Déconnecté.");
         } catch (IOException e) {
-            logError("Erreur lors de la déconnexion : " + e.getMessage());
+            System.out.println("Erreur de déconnexion : " + e.getMessage());
         } finally {
             cleanupResources();
         }
     }
 
     /**
-     * Tente une reconnexion au serveur.
-     * 
-     * @return true si la reconnexion a réussi, false sinon
-     */
-    public boolean reconnect() {
-        log("Tentative de reconnexion...");
-        disconnect();
-        return connect();
-    }
-
-    /**
-     * Nettoie les ressources utilisées et met à jour l'état de connexion.
+     * Libère les ressources utilisées par la connexion (flux et socket).
+     * Met à jour l'état de la connexion et publie un événement "server:disconnected".
      */
     private void cleanupResources() {
         try {
             if (in != null) in.close();
             if (out != null) out.close();
         } catch (IOException e) {
-            logError("Erreur lors du nettoyage des ressources : " + e.getMessage());
+            System.out.println("Erreur de nettoyage des ressources : " + e.getMessage());
         } finally {
             isConnected = false;
-            if (listener != null)
-                listener.onDisconnected();
+            eventManager.publish("server:disconnected", null);
         }
     }
 
     /**
-     * Notifie une erreur de connexion.
-     * 
-     * @param errorMessage Le message d'erreur
-     */
-    private void notifyConnectionError(String errorMessage) {
-        logError(errorMessage);
-        if (listener != null)
-            listener.onConnectionError(errorMessage);
-    }
-
-    /**
-     * Notifie que la connexion a été perdue.
-     */
-    private void notifyDisconnection() {
-        log("Connexion perdue.");
-        cleanupResources();
-    }
-
-    /**
-     * Retourne l'état actuel de la connexion.
-     * 
-     * @return true si connecté, false sinon
+     * Indique si la connexion avec le serveur est active.
+     *
+     * @return true si la connexion est active, false sinon.
      */
     public boolean isConnected() {
         return isConnected;
     }
 
-    /**
-     * Méthode utilitaire pour les logs.
-     * 
-     * @param message Le message à afficher
-     */
-    private void log(String message) {
-        System.out.println("[ServerConnection] " + message);
-    }
-
-    /**
-     * Méthode utilitaire pour les erreurs.
-     * 
-     * @param errorMessage Le message d'erreur à afficher
-     */
-    private void logError(String errorMessage) {
-        System.err.println("[ServerConnection] " + errorMessage);
+    // Méthode pour définir un listener externe
+    public void setListener(ConnectionListener listener) {
+        this.listener = listener;
     }
 }

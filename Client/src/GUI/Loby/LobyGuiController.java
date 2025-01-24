@@ -6,9 +6,31 @@ import javafx.fxml.FXML;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 
+import GUI.Loby.LobyGuiController;
+import main.EventManager; // Assurez-vous d'importer EventManager
+
+import javafx.application.Application;
+import javafx.application.Platform;
+import javafx.fxml.FXMLLoader;
+import javafx.stage.Stage;
+import javafx.scene.Scene;
+
+import javafx.scene.layout.AnchorPane;
+import javafx.scene.control.Alert;
+import javafx.scene.control.Alert.AlertType;
+import javafx.scene.control.ButtonType;
+
+import java.io.IOException;
+
+/**
+ * Contrôleur pour l'interface graphique du lobby.
+ * Gère l'affichage des messages du serveur, la connexion et les interactions des boutons.
+ */
 public class LobyGuiController {
 
     private static ServerConnection serverConnection;
+    private static CreateGameController createGameController;
+    private static Stage primaryStage;
 
     @FXML
     private Label titleLabel; // Le label affichant "Bonjour, choisissez entre :"
@@ -34,6 +56,15 @@ public class LobyGuiController {
         serverConnection = s;
     }
 
+        /**
+     * Définit la connexion au serveur pour le contrôleur.
+     * 
+     * @param s Une instance de ServerConnection
+     */
+    public static void setStage(Stage s) {
+        primaryStage = s;
+    }
+
     /**
      * Méthode d'initialisation, appelée automatiquement lorsque le contrôleur est chargé.
      * Initialise l'état des composants graphiques.
@@ -46,7 +77,7 @@ public class LobyGuiController {
         quitButton.setOnAction(event -> quitApplication());
 
         // Initialiser l'état du label d'erreur : vide et invisible
-        errorLabel.setVisible(false); // Caché
+        errorLabel.setVisible(false); // Caché au départ
     }
 
     /**
@@ -54,8 +85,51 @@ public class LobyGuiController {
      */
     @FXML
     private void startNewGame() {
-        serverConnection.sendToServer("create_game, 4");
-        // Ajouter la logique pour démarrer une nouvelle partie
+        FXMLLoader loader = null;
+        AnchorPane root = null;
+        try {
+            // Charger le FXML et récupérer le contrôleur
+            loader = new FXMLLoader(getClass().getResource("/GUI/Loby/createGame.fxml"));
+            root = loader.load();
+        } catch (IOException e) {
+            Platform.runLater(() -> {
+                Alert alert = new Alert(AlertType.ERROR,
+                        "impossible de charger la suite",
+                        ButtonType.OK);
+                alert.setTitle("Erreur de chargement");
+                alert.setHeaderText(null); // Pas d'en-tête
+                alert.showAndWait().ifPresent(response -> {
+                    if (response == ButtonType.OK) {
+                        // Quitter l'application si l'utilisateur clique sur OK
+                        Platform.exit();
+                        System.exit(0);
+                    }
+                });
+            });
+        }
+        createGameController = loader.getController();
+        CreateGameController.setServeurConnection(serverConnection);
+
+        serverConnection.setListener(new ServerConnection.ConnectionListener() {
+            @Override
+            public void onServerMessage(String message) {
+                Platform.runLater(() -> createGameController.displayServerMessage(message));
+            }
+
+            @Override
+            public void onConnectionError(String error) {
+                Platform.runLater(() -> createGameController.displayConnectionError(error));
+            }
+
+            @Override
+            public void onDisconnected() {
+                Platform.runLater(() -> createGameController.displayServerMessage("Déconnecté du serveur."));
+            }
+        });
+        // Créer la scène et l'afficher
+        Scene scene = new Scene(root);
+        primaryStage.setScene(scene);
+        primaryStage.setTitle("Création d'équipe");
     }
 
     /**
@@ -73,6 +147,7 @@ public class LobyGuiController {
     @FXML
     private void quitApplication() {
         System.out.println("Fermeture de l'application...");
+        serverConnection.disconnect();
         System.exit(0); // Fermer l'application
     }
 
@@ -86,16 +161,16 @@ public class LobyGuiController {
     }
 
     /**
-     * Affiche un message d'erreur de connexion.
+     * Affiche un message d'erreur de connexion dans le label et désactive les boutons.
      * 
      * @param error Le message d'erreur à afficher
      */
     public void displayConnectionError(String error) {
-        // Afficher le message d'erreur
+        // Afficher le message d'erreur dans le label
         errorLabel.setText(error);
         errorLabel.setVisible(true); // Rendre le label visible
 
-        // Désactiver les boutons
+        // Désactiver les boutons pour éviter toute interaction avec le serveur
         createGameButton.setDisable(true);
         joinGameButton.setDisable(true);
     }
@@ -109,7 +184,7 @@ public class LobyGuiController {
         errorLabel.setText(""); // Réinitialiser le texte
         errorLabel.setVisible(false); // Masquer le label
 
-        // Réactiver les boutons
+        // Réactiver les boutons pour permettre à l'utilisateur d'interagir
         createGameButton.setDisable(false);
         joinGameButton.setDisable(false);
     }
