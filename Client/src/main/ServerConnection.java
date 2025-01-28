@@ -25,11 +25,10 @@ public class ServerConnection {
     private BufferedReader in;
     private PrintWriter out;
     private boolean isConnected = false; // Indique si une connexion est active
+    private EventManager eventManager;      // Gestionnaire d'événements
 
-    // Gestionnaire d'événements
-    private EventManager eventManager;
-       // Ajout d'une interface pour le listener
-       public interface ConnectionListener {
+    // Ajout d'une interface pour le listener
+    public interface ConnectionListener {
         void onServerMessage(String message);
         void onConnectionError(String error);
         void onDisconnected();
@@ -103,9 +102,9 @@ public class ServerConnection {
         try {
             String message;
             // Lecture des messages envoyés par le serveur
-            while ((message = in.readLine()) != null) {
+            while ((message = in.readLine()) != null)
                 eventManager.publish("server:message_received", message);
-            }
+
         } catch (IOException e) {
             // Gérer la déconnexion
             eventManager.publish("server:disconnected", null);
@@ -123,9 +122,9 @@ public class ServerConnection {
         if (isConnected && out != null) {
             out.println(message);
             System.out.println("Message envoyé : " + message);
-        } else {
-            System.out.println("Connexion non établie. Impossible d'envoyer le message.");
         }
+        else
+            System.out.println("Connexion non établie. Impossible d'envoyer le message.");
     }
 
     /**

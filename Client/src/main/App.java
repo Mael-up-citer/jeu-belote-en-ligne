@@ -2,7 +2,7 @@ package main;
 
 import GUI.Loby.LobyGuiController;
 import main.EventManager; // Assurez-vous d'importer EventManager
-import main.ServerConnection; // Assurez-vous d'importer EventManager
+import main.ServerConnection; // Assurez-vous d'importer ServerConnection
 
 import javafx.application.Application;
 import javafx.application.Platform;
@@ -20,15 +20,14 @@ import java.util.TimerTask;
 
 import java.io.IOException;
 
-
 public class App extends Application {
 
-    private static final int MAX_RETRIES = 5; // Nombre maximal de tentatives de connexion
-    private static final int RETRY_INTERVAL_MS = 3000; // Intervalle de réessai (en ms)
+    private static final int MAX_RETRIES = 10; // Nombre maximal de tentatives de connexion
+    private static final int RETRY_INTERVAL_MS = 1000; // Intervalle de réessai (en ms)
     private static int retryCount = 0; // Compteur des tentatives de connexion
 
     private static ServerConnection serverConnection; // Singleton de la connexion au serveur
-    private static EventManager eventManager; // EventManager nécessaire pour la connexion
+    private static EventManager eventManager; // Singleton EventManager
     private LobyGuiController lobyGuiController; // Contrôleur du lobby
 
     public static void main(String[] args) {
@@ -37,8 +36,8 @@ public class App extends Application {
 
     @Override
     public void start(Stage primaryStage) throws IOException {
-        // Créer l'instance d'EventManager
-        eventManager = new EventManager(); 
+        // Récupérer l'instance unique de EventManager via le singleton
+        eventManager = EventManager.getInstance(); 
 
         // Charger le FXML et récupérer le contrôleur
         FXMLLoader loader = new FXMLLoader(getClass().getResource("/GUI/Loby/lobyGui.fxml"));
@@ -83,17 +82,17 @@ public class App extends Application {
      * Tente de se connecter au serveur avec des réessais en cas d'échec.
      */
     private void attemptConnection() {
-        if (serverConnection.connect())
+        if (serverConnection.connect()) {
             // Si la connexion réussit, réinitialiser la GUI
             Platform.runLater(() -> lobyGuiController.resetGui());
-        else {
+        } else {
             // Prévient la gui que la connexion a échoué
-            Platform.runLater(() -> lobyGuiController.displayConnectionError("impossible de ce connecter au serveur"));
+            Platform.runLater(() -> lobyGuiController.displayConnectionError("impossible de se connecter au serveur"));
             retryCount++;
-            if (retryCount >= MAX_RETRIES)
+            if (retryCount >= MAX_RETRIES) {
                 // Si le nombre maximal de tentatives est atteint, afficher une alerte
                 showConnectionFailureAlert();
-            else {
+            } else {
                 // Réessayer après un intervalle défini
                 new Timer().schedule(new TimerTask() {
                     @Override

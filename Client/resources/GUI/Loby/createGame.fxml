@@ -9,10 +9,10 @@
 <?import javafx.scene.layout.HBox?>
 <?import javafx.scene.layout.VBox?>
 
-<AnchorPane maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="600.0" prefWidth="650.0" stylesheets="@LobyStyle.css" xmlns="http://javafx.com/javafx/23.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="GUI.Loby.CreateGameController">
+<AnchorPane maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="600.0" prefWidth="650.0" xmlns="http://javafx.com/javafx/23.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="GUI.Loby.CreateGameController">
    <children>
-      <ComboBox fx:id="selectHumain" layoutX="211.0" layoutY="41.0" promptText="Combien d'humains voulez vous ?" visibleRowCount="3" />
-      <HBox layoutY="160.0" prefHeight="206.0" prefWidth="650.0">
+      <ComboBox fx:id="selectNbHumain" layoutX="286.0" layoutY="70.0" promptText="1" visibleRowCount="3" />
+      <HBox layoutY="187.0" prefHeight="206.0" prefWidth="650.0">
          <children>
             <VBox fx:id="Equipe1" prefHeight="206.0" prefWidth="322.0">
                <children>
@@ -26,20 +26,16 @@
             </VBox>
          </children>
       </HBox>
-      <Label layoutX="264.0" layoutY="96.0" text="Composez les équipes" />
-      <Button fx:id="retournButton" layoutX="14.0" layoutY="548.0" mnemonicParsing="false" text="Retour" />
-      <Button fx:id="validateButton" layoutX="568.0" layoutY="548.0" mnemonicParsing="false" text="Valider" />
-      <BorderPane layoutX="200.0" layoutY="348.0" prefHeight="63.0" prefWidth="252.0">
-         <center>
-            <FlowPane columnHalignment="CENTER" prefHeight="59.0" prefWidth="252.0" BorderPane.alignment="CENTER">
-               <children>
-                  <ComboBox fx:id="c1" />
-                  <ComboBox fx:id="c2" />
-                  <ComboBox fx:id="c3" />
-                  <ComboBox fx:id="c4" />
-               </children></FlowPane>
-         </center>
-      </BorderPane>
+      <Label layoutX="251.0" layoutY="125.0" text="Composez les équipes" />
+      <Button fx:id="retournButton" layoutX="14.0" layoutY="548.0" mnemonicParsing="false" stylesheets="@LobyStyle.css" text="Retour" />
+      <Button fx:id="validateButton" layoutX="568.0" layoutY="548.0" mnemonicParsing="false" stylesheets="@LobyStyle.css" text="Valider" />
+      <BorderPane layoutX="200.0" layoutY="348.0" prefHeight="63.0" prefWidth="252.0" />
       <Label fx:id="errorLabel" layoutX="312.0" layoutY="477.0" textFill="#f20f0f" />
+      <Label layoutX="219.0" layoutY="27.0" text="Combien d'humains voulez vous ?" />
+      <FlowPane fx:id="poolPane" columnHalignment="CENTER" layoutX="188.0" layoutY="383.0" prefHeight="59.0" prefWidth="252.0">
+         <children>
+            <Button fx:id="joueurButton" mnemonicParsing="false" text="Moi" />
+         </children>
+      </FlowPane>
    </children>
 </AnchorPane>

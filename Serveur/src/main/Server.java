@@ -186,14 +186,17 @@ public class Server {
          * @param out Flux de sortie pour informer le joueur.
          */
         private void joinGame(String gameId, PrintWriter out) {
-            int numberOfHumans = gameQueue.get(gameId).getFirst();
-
             synchronized (gameQueue) {
+                if (gameQueue.isEmpty()) {
+                    out.println("Erreur: Partie inexistante.");
+                    return;
+                }
                 // Regarde si la partie existe
                 if (!gameQueue.containsKey(gameId)) {
                     out.println("Erreur: Partie inexistante.");
                     return;
                 }
+                int numberOfHumans = gameQueue.get(gameId).getFirst();
                 // Regarde si il reste de la place
                 if (gameQueue.get(gameId).getSecond().size() >= numberOfHumans) {
                     out.println("Erreur: La partie est déjà complète.");

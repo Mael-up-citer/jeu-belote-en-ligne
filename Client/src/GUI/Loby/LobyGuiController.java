@@ -30,6 +30,7 @@ public class LobyGuiController {
 
     private static ServerConnection serverConnection;
     private static CreateGameController createGameController;
+    private static JoinGameController joinGameController;
     private static Stage primaryStage;
 
     @FXML
@@ -56,7 +57,7 @@ public class LobyGuiController {
         serverConnection = s;
     }
 
-        /**
+    /**
      * Définit la connexion au serveur pour le contrôleur.
      * 
      * @param s Une instance de ServerConnection
@@ -109,6 +110,7 @@ public class LobyGuiController {
         }
         createGameController = loader.getController();
         CreateGameController.setServeurConnection(serverConnection);
+        CreateGameController.setStage(primaryStage);
 
         serverConnection.setListener(new ServerConnection.ConnectionListener() {
             @Override
@@ -137,8 +139,53 @@ public class LobyGuiController {
      */
     @FXML
     private void joinExistingGame() {
-        System.out.println("Tentative de rejoindre une partie existante...");
-        // Ajouter la logique pour rejoindre une partie
+        FXMLLoader loader = null;
+        AnchorPane root = null;
+        try {
+            // Charger le FXML et récupérer le contrôleur
+            loader = new FXMLLoader(getClass().getResource("/GUI/Loby/joinGame.fxml"));
+            root = loader.load();
+        } catch (IOException e) {
+            e.printStackTrace();
+            Platform.runLater(() -> {
+                Alert alert = new Alert(AlertType.ERROR,
+                        "impossible de charger la suite",
+                        ButtonType.OK);
+                alert.setTitle("Erreur de chargement");
+                alert.setHeaderText(null); // Pas d'en-tête
+                alert.showAndWait().ifPresent(response -> {
+                    if (response == ButtonType.OK) {
+                        // Quitter l'application si l'utilisateur clique sur OK
+                        Platform.exit();
+                        System.exit(0);
+                    }
+                });
+            });
+        }
+        joinGameController = loader.getController();
+        JoinGameController.setServeurConnection(serverConnection);
+        JoinGameController.setStage(primaryStage);
+
+        serverConnection.setListener(new ServerConnection.ConnectionListener() {
+            @Override
+            public void onServerMessage(String message) {
+                Platform.runLater(() -> joinGameController.handleServeurMessage(message));
+            }
+
+            @Override
+            public void onConnectionError(String error) {
+                Platform.runLater(() -> joinGameController.displayConnectionError(error));
+            }
+
+            @Override
+            public void onDisconnected() {
+                Platform.runLater(() -> joinGameController.handleServeurMessage("Déconnecté du serveur."));
+            }
+        });
+        // Créer la scène et l'afficher
+        Scene scene = new Scene(root);
+        primaryStage.setScene(scene);
+        primaryStage.setTitle("rejoindre une équipe");
     }
 
     /**

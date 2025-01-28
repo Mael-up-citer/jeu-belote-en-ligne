@@ -13,6 +13,29 @@ public class EventManager {
     // Map des types d'événements vers leurs abonnés
     private HashMap<String, Set<EventListener>> listenersMap = new HashMap<>();
 
+    // Instance unique du gestionnaire
+    private static EventManager instance;
+
+    // Constructeur privé pour empêcher l'instanciation externe
+    private EventManager() {}
+
+    /**
+     * Retourne l'instance unique du gestionnaire d'événements.
+     *
+     * @return L'instance unique de EventManager.
+     */
+    public static EventManager getInstance() {
+        // Crée une instance si elle n'existe pas encore
+        if (instance == null) {
+            synchronized (EventManager.class) {
+                // Double vérification pour garantir que l'instance est créée une seule fois
+                if (instance == null)
+                    instance = new EventManager();
+            }
+        }
+        return instance;
+    }
+
     /**
      * Interface fonctionnelle pour gérer les événements.
      */
@@ -39,6 +62,7 @@ public class EventManager {
      */
     public void unsubscribe(String eventType, EventListener listener) {
         Set<EventListener> listeners = listenersMap.get(eventType);
+
         if (listeners != null)
             listeners.remove(listener);
     }
@@ -51,9 +75,9 @@ public class EventManager {
      */
     public void publish(String eventType, Object data) {
         Set<EventListener> listeners = listenersMap.get(eventType);
-        if (listeners != null) {
+
+        if (listeners != null)
             for (EventListener listener : listeners)
                 listener.onEvent(eventType, data);
-        }
     }
 }
