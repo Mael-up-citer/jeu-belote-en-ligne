@@ -1,13 +1,9 @@
 package GUI.Loby;
 
+import GUI.Gui;
+import main.EventManager;
 import main.ServerConnection;
-
 import javafx.fxml.FXML;
-import javafx.scene.control.Button;
-import javafx.scene.control.Label;
-
-import GUI.Loby.LobyGuiController;
-import main.EventManager; // Assurez-vous d'importer EventManager
 
 import javafx.application.Application;
 import javafx.application.Platform;
@@ -15,10 +11,12 @@ import javafx.fxml.FXMLLoader;
 import javafx.stage.Stage;
 import javafx.scene.Scene;
 
-import javafx.scene.layout.AnchorPane;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Alert.AlertType;
 import javafx.scene.control.ButtonType;
+
+import javafx.scene.control.Button;
+import javafx.scene.control.Label;
 
 import java.io.IOException;
 
@@ -26,12 +24,7 @@ import java.io.IOException;
  * Contrôleur pour l'interface graphique du lobby.
  * Gère l'affichage des messages du serveur, la connexion et les interactions des boutons.
  */
-public class LobyGuiController {
-
-    private static ServerConnection serverConnection;
-    private static CreateGameController createGameController;
-    private static JoinGameController joinGameController;
-    private static Stage primaryStage;
+public class LobyGuiController extends Gui {
 
     @FXML
     private Label titleLabel; // Le label affichant "Bonjour, choisissez entre :"
@@ -48,23 +41,6 @@ public class LobyGuiController {
     @FXML
     private Button quitButton; // Le bouton "Quitter"
 
-    /**
-     * Définit la connexion au serveur pour le contrôleur.
-     * 
-     * @param s Une instance de ServerConnection
-     */
-    public static void setServeurConnection(ServerConnection s) {
-        serverConnection = s;
-    }
-
-    /**
-     * Définit la connexion au serveur pour le contrôleur.
-     * 
-     * @param s Une instance de ServerConnection
-     */
-    public static void setStage(Stage s) {
-        primaryStage = s;
-    }
 
     /**
      * Méthode d'initialisation, appelée automatiquement lorsque le contrôleur est chargé.
@@ -86,52 +62,7 @@ public class LobyGuiController {
      */
     @FXML
     private void startNewGame() {
-        FXMLLoader loader = null;
-        AnchorPane root = null;
-        try {
-            // Charger le FXML et récupérer le contrôleur
-            loader = new FXMLLoader(getClass().getResource("/GUI/Loby/createGame.fxml"));
-            root = loader.load();
-        } catch (IOException e) {
-            Platform.runLater(() -> {
-                Alert alert = new Alert(AlertType.ERROR,
-                        "impossible de charger la suite",
-                        ButtonType.OK);
-                alert.setTitle("Erreur de chargement");
-                alert.setHeaderText(null); // Pas d'en-tête
-                alert.showAndWait().ifPresent(response -> {
-                    if (response == ButtonType.OK) {
-                        // Quitter l'application si l'utilisateur clique sur OK
-                        Platform.exit();
-                        System.exit(0);
-                    }
-                });
-            });
-        }
-        createGameController = loader.getController();
-        CreateGameController.setServeurConnection(serverConnection);
-        CreateGameController.setStage(primaryStage);
-
-        serverConnection.setListener(new ServerConnection.ConnectionListener() {
-            @Override
-            public void onServerMessage(String message) {
-                Platform.runLater(() -> createGameController.displayServerMessage(message));
-            }
-
-            @Override
-            public void onConnectionError(String error) {
-                Platform.runLater(() -> createGameController.displayConnectionError(error));
-            }
-
-            @Override
-            public void onDisconnected() {
-                Platform.runLater(() -> createGameController.displayServerMessage("Déconnecté du serveur."));
-            }
-        });
-        // Créer la scène et l'afficher
-        Scene scene = new Scene(root);
-        primaryStage.setScene(scene);
-        primaryStage.setTitle("Création d'équipe");
+        loadScene("/GUI/Loby/CreateGame.fxml");
     }
 
     /**
@@ -139,53 +70,7 @@ public class LobyGuiController {
      */
     @FXML
     private void joinExistingGame() {
-        FXMLLoader loader = null;
-        AnchorPane root = null;
-        try {
-            // Charger le FXML et récupérer le contrôleur
-            loader = new FXMLLoader(getClass().getResource("/GUI/Loby/joinGame.fxml"));
-            root = loader.load();
-        } catch (IOException e) {
-            e.printStackTrace();
-            Platform.runLater(() -> {
-                Alert alert = new Alert(AlertType.ERROR,
-                        "impossible de charger la suite",
-                        ButtonType.OK);
-                alert.setTitle("Erreur de chargement");
-                alert.setHeaderText(null); // Pas d'en-tête
-                alert.showAndWait().ifPresent(response -> {
-                    if (response == ButtonType.OK) {
-                        // Quitter l'application si l'utilisateur clique sur OK
-                        Platform.exit();
-                        System.exit(0);
-                    }
-                });
-            });
-        }
-        joinGameController = loader.getController();
-        JoinGameController.setServeurConnection(serverConnection);
-        JoinGameController.setStage(primaryStage);
-
-        serverConnection.setListener(new ServerConnection.ConnectionListener() {
-            @Override
-            public void onServerMessage(String message) {
-                Platform.runLater(() -> joinGameController.handleServeurMessage(message));
-            }
-
-            @Override
-            public void onConnectionError(String error) {
-                Platform.runLater(() -> joinGameController.displayConnectionError(error));
-            }
-
-            @Override
-            public void onDisconnected() {
-                Platform.runLater(() -> joinGameController.handleServeurMessage("Déconnecté du serveur."));
-            }
-        });
-        // Créer la scène et l'afficher
-        Scene scene = new Scene(root);
-        primaryStage.setScene(scene);
-        primaryStage.setTitle("rejoindre une équipe");
+        loadScene("/GUI/Loby/joinGame.fxml");
     }
 
     /**
@@ -194,17 +79,8 @@ public class LobyGuiController {
     @FXML
     private void quitApplication() {
         System.out.println("Fermeture de l'application...");
-        serverConnection.disconnect();
+        ServerConnection.getInstance().disconnect();    // Ferme la connexion
         System.exit(0); // Fermer l'application
-    }
-
-    /**
-     * Affiche un message provenant du serveur.
-     * 
-     * @param message Le message à afficher
-     */
-    public void displayServerMessage(String message) {
-        System.out.println("Message du serveur : " + message);
     }
 
     /**

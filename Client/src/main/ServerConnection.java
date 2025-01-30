@@ -18,29 +18,22 @@ public class ServerConnection {
 
     // Instance unique pour le singleton
     private static ServerConnection instance;
-    private ConnectionListener listener;  // Référence au listener
 
     // Socket et flux de communication
     private Socket socket;
     private BufferedReader in;
     private PrintWriter out;
     private boolean isConnected = false; // Indique si une connexion est active
-    private EventManager eventManager;      // Gestionnaire d'événements
+    private EventManager eventManager;
 
-    // Ajout d'une interface pour le listener
-    public interface ConnectionListener {
-        void onServerMessage(String message);
-        void onConnectionError(String error);
-        void onDisconnected();
-    }
 
     /**
      * Constructeur privé pour le pattern Singleton.
      *
      * @param eventManager L'EventManager utilisé pour publier les événements.
      */
-    private ServerConnection(EventManager eventManager) {
-        this.eventManager = eventManager;
+    private ServerConnection() {
+        this.eventManager = EventManager.getInstance();
     }
 
     /**
@@ -50,9 +43,9 @@ public class ServerConnection {
      * @param eventManager L'EventManager utilisé pour gérer les événements (nécessaire lors de la première initialisation).
      * @return L'instance unique de ServerConnection.
      */
-    public static ServerConnection getInstance(EventManager eventManager) {
+    public static ServerConnection getInstance() {
         if (instance == null)
-            instance = new ServerConnection(eventManager);
+            instance = new ServerConnection();
 
         return instance;
     }
@@ -67,7 +60,7 @@ public class ServerConnection {
      */
     public boolean connect() {
         if (isConnected) {
-            System.out.println("Déjà connecté.");
+            eventManager.publish("server:connected", null);
             return true;
         }
 
@@ -106,8 +99,8 @@ public class ServerConnection {
                 eventManager.publish("server:message_received", message);
 
         } catch (IOException e) {
-            // Gérer la déconnexion
-            eventManager.publish("server:disconnected", null);
+            // Si le serveur est déconnecté ou iniaténiable
+            eventManager.publish("server:outOfRange", e.getMessage());
             cleanupResources();
         }
     }
@@ -119,12 +112,11 @@ public class ServerConnection {
      * @param message Le message à envoyer au serveur.
      */
     public void sendToServer(String message) {
-        if (isConnected && out != null) {
-            out.println(message);
-            System.out.println("Message envoyé : " + message);
-        }
+        // Si le flux vers le serveur est disponible
+        if (isConnected && out != null)
+            out.println(message);   // Envoie le message au serveur
         else
-            System.out.println("Connexion non établie. Impossible d'envoyer le message.");
+            eventManager.publish("server:outOfRange", "connexion au serveur non établie, impossible d'envoyer le message");
     }
 
     /**
@@ -133,12 +125,10 @@ public class ServerConnection {
      */
     public void disconnect() {
         try {
-            if (socket != null && !socket.isClosed()) {
+            if (socket != null && !socket.isClosed())
                 socket.close();
-            }
-            System.out.println("Déconnecté.");
         } catch (IOException e) {
-            System.out.println("Erreur de déconnexion : " + e.getMessage());
+            eventManager.publish("server:outOfRange", e.getMessage());
         } finally {
             cleanupResources();
         }
@@ -153,10 +143,10 @@ public class ServerConnection {
             if (in != null) in.close();
             if (out != null) out.close();
         } catch (IOException e) {
-            System.out.println("Erreur de nettoyage des ressources : " + e.getMessage());
+            eventManager.publish("server:outOfRange", e.getMessage());
         } finally {
             isConnected = false;
-            eventManager.publish("server:disconnected", null);
+            eventManager.publish("server:disconnected", "Succès: déconnection effectué");
         }
     }
 
@@ -167,10 +157,5 @@ public class ServerConnection {
      */
     public boolean isConnected() {
         return isConnected;
-    }
-
-    // Méthode pour définir un listener externe
-    public void setListener(ConnectionListener listener) {
-        this.listener = listener;
     }
 }

@@ -1,126 +1,88 @@
 package main;
 
+import GUI.Gui;
 import GUI.Loby.LobyGuiController;
-import main.EventManager; // Assurez-vous d'importer EventManager
-import main.ServerConnection; // Assurez-vous d'importer ServerConnection
-
 import javafx.application.Application;
 import javafx.application.Platform;
-import javafx.fxml.FXMLLoader;
 import javafx.stage.Stage;
-import javafx.scene.Scene;
-
-import javafx.scene.layout.AnchorPane;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Alert.AlertType;
 import javafx.scene.control.ButtonType;
 
-import java.util.Timer;
-import java.util.TimerTask;
-
-import java.io.IOException;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
 public class App extends Application {
 
-    private static final int MAX_RETRIES = 10; // Nombre maximal de tentatives de connexion
+    private static final int MAX_RETRIES = 15; // Nombre maximal de tentatives de connexion
     private static final int RETRY_INTERVAL_MS = 1000; // Intervalle de réessai (en ms)
     private static int retryCount = 0; // Compteur des tentatives de connexion
+    private final ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
 
-    private static ServerConnection serverConnection; // Singleton de la connexion au serveur
-    private static EventManager eventManager; // Singleton EventManager
-    private LobyGuiController lobyGuiController; // Contrôleur du lobby
+    private LobyGuiController lobby;
 
     public static void main(String[] args) {
         launch(args);
     }
 
     @Override
-    public void start(Stage primaryStage) throws IOException {
-        // Récupérer l'instance unique de EventManager via le singleton
-        eventManager = EventManager.getInstance(); 
+    public void start(Stage primaryStage) {
+        Gui.setStage(primaryStage); // Initialise le Stage pour toutes les GUI
 
-        // Charger le FXML et récupérer le contrôleur
-        FXMLLoader loader = new FXMLLoader(getClass().getResource("/GUI/Loby/lobyGui.fxml"));
-        AnchorPane root = loader.load();
-        lobyGuiController = loader.getController();
+        // Charger et afficher la scène du lobby
+        lobby = Gui.loadScene("/GUI/Loby/lobyGui.fxml");
 
-        // Obtenir l'instance de ServerConnection avec l'EventManager
-        serverConnection = ServerConnection.getInstance(eventManager);
-
-        LobyGuiController.setServeurConnection(serverConnection);
-        LobyGuiController.setStage(primaryStage);
-
-        // Configurer le listener pour recevoir des événements du serveur
-        serverConnection.setListener(new ServerConnection.ConnectionListener() {
-            @Override
-            public void onServerMessage(String message) {
-                Platform.runLater(() -> lobyGuiController.displayServerMessage(message));
-            }
-
-            @Override
-            public void onConnectionError(String error) {
-                Platform.runLater(() -> lobyGuiController.displayConnectionError(error));
-            }
-
-            @Override
-            public void onDisconnected() {
-                Platform.runLater(() -> lobyGuiController.displayServerMessage("Déconnecté du serveur."));
-            }
-        });
-
-        // Créer la scène et l'afficher
-        Scene scene = new Scene(root);
-        primaryStage.setScene(scene);
-        primaryStage.setTitle("Lobby du jeu");
-        primaryStage.show();
-
-        // Tenter de se connecter au serveur
-        attemptConnection();
+        primaryStage.show(); // Afficher la fenêtre seulement si le chargement a réussi
+        attemptConnection(); // Tente de se connecter au serveur
     }
 
     /**
      * Tente de se connecter au serveur avec des réessais en cas d'échec.
      */
     private void attemptConnection() {
-        if (serverConnection.connect()) {
-            // Si la connexion réussit, réinitialiser la GUI
-            Platform.runLater(() -> lobyGuiController.resetGui());
-        } else {
-            // Prévient la gui que la connexion a échoué
-            Platform.runLater(() -> lobyGuiController.displayConnectionError("impossible de se connecter au serveur"));
-            retryCount++;
-            if (retryCount >= MAX_RETRIES) {
-                // Si le nombre maximal de tentatives est atteint, afficher une alerte
-                showConnectionFailureAlert();
-            } else {
-                // Réessayer après un intervalle défini
-                new Timer().schedule(new TimerTask() {
-                    @Override
-                    public void run() {
-                        attemptConnection();
-                    }
-                }, RETRY_INTERVAL_MS);
+        Platform.runLater(() -> lobby.resetGui()); // S'assurer que resetGui() est exécuté sur le thread JavaFX
+
+        scheduler.execute(() -> {
+            if (!ServerConnection.getInstance().connect()) {
+                Platform.runLater(() -> lobby.displayConnectionError("Impossible de se connecter au serveur"));
+                retryCount++;
+
+                if (retryCount >= MAX_RETRIES)
+                    Platform.runLater(this::showConnectionFailureAlert);
+                else
+                    scheduler.schedule(this::attemptConnection, RETRY_INTERVAL_MS, TimeUnit.MILLISECONDS);
             }
-        }
+        });
     }
 
     /**
      * Affiche une alerte si la connexion échoue après plusieurs tentatives.
      */
     private void showConnectionFailureAlert() {
-        Platform.runLater(() -> {
-            Alert alert = new Alert(AlertType.ERROR,
-                    "Le nombre maximum de tentatives de connexion a été atteint. Abandon de la connexion.",
-                    ButtonType.OK);
-            alert.setTitle("Erreur de Connexion");
-            alert.setHeaderText(null); // Pas d'en-tête
-            alert.showAndWait().ifPresent(response -> {
-                if (response == ButtonType.OK) {
-                    // Quitter l'application si l'utilisateur clique sur OK
-                    Platform.exit();
-                    System.exit(0);
-                }
-            });
+        Alert alert = new Alert(AlertType.ERROR,
+                "Le nombre maximum de tentatives de connexion a été atteint. Abandon de la connexion.",
+                ButtonType.OK);
+        alert.setTitle("Erreur de Connexion");
+        alert.setHeaderText(null); // Pas d'en-tête
+        alert.showAndWait().ifPresent(response -> {
+            if (response == ButtonType.OK)
+                shutdownApp();
         });
+    }
+
+    /**
+     * Ferme proprement l'application.
+     */
+    private void shutdownApp() {
+        Platform.exit(); // Ferme la GUI
+        ServerConnection.getInstance().disconnect(); // Ferme la connexion
+        scheduler.shutdown(); // Arrête proprement le scheduler
+        System.exit(0); // Ferme le programme
+    }
+
+    @Override
+    public void stop() {
+        shutdownApp(); // Fermer proprement l'application lors de l'arrêt de JavaFX
     }
 }

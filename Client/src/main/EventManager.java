@@ -7,6 +7,11 @@ import java.util.Set;
 /**
  * Gestionnaire central des événements de l'application.
  * Permet de souscrire, désinscrire et publier des événements.
+ * 
+ * Type d'event:    server:connected: indique que la connexion est établie
+ *                  server:connection_error: indique une erreur dans l'établissement de la connexion
+ *                  server:message_received: indique qu'un message a été recu
+ *                  server:outOfRange: indique que le serveur est hor de portée
  */
 public class EventManager {
 
@@ -17,7 +22,8 @@ public class EventManager {
     private static EventManager instance;
 
     // Constructeur privé pour empêcher l'instanciation externe
-    private EventManager() {}
+    private EventManager() {
+    }
 
     /**
      * Retourne l'instance unique du gestionnaire d'événements.
@@ -26,13 +32,9 @@ public class EventManager {
      */
     public static EventManager getInstance() {
         // Crée une instance si elle n'existe pas encore
-        if (instance == null) {
-            synchronized (EventManager.class) {
-                // Double vérification pour garantir que l'instance est créée une seule fois
-                if (instance == null)
-                    instance = new EventManager();
-            }
-        }
+        if (instance == null)
+            instance = new EventManager();
+
         return instance;
     }
 

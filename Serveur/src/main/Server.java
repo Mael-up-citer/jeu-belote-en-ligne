@@ -69,21 +69,36 @@ public class Server {
                 // Boucle pour traiter les commandes envoyées par le client
                 while ((input = in.readLine()) != null) {
                     if (input.startsWith("create_game")) {
-                        // Commande pour créer une nouvelle partie
-                        String[] parts = input.split(" ");
+                        String[] str = input.split(";");
+                        ArrayList<String> equipe2 = new ArrayList<>();
+                        ArrayList<String> equipe1 = new ArrayList<>();
+                        int numberOfHumans = 0;
 
-                        // Regarde si la commande est bien formée
-                        if (parts.length == 2) {
-                            try {
-                                // Exctrait le nombre d'Humain
-                                int numberOfHumans = Integer.parseInt(parts[1]);
-                                createGame(numberOfHumans, out);
-                            } catch (NumberFormatException e) {
-                                out.println("Erreur: Nombre d'humains invalide.");
+                        // Remplie l'equipe 1
+                        for (int i = 1; i < 3; i++) {
+                            String joueur;
+                            if (str[i].startsWith("humain")) {
+                                joueur = str[i];
+                                numberOfHumans++;
                             }
+                            else {
+                                joueur = str[i].split(",")[1];
+                            }
+                            equipe1.add(joueur);
                         }
-                        else
-                            out.println("Erreur: Mauvais format de commande.");
+                        // Remplie l'equipe 2
+                        for (int i = 3; i < str.length; i++) {
+                            String joueur;
+                            if (str[i].startsWith("humain")) {
+                                joueur = str[i];
+                                numberOfHumans++;
+                            }
+                            else {
+                                joueur = str[i].split(",")[1];
+                            }
+                            equipe2.add(joueur);
+                        }
+                        createGame(numberOfHumans, equipe1, equipe2, out);
                     }
                     else if (input.startsWith("join_game")) {
                         // Commande pour rejoindre une partie existante
@@ -95,9 +110,6 @@ public class Server {
                         else
                             out.println("Erreur: Mauvais format de commande.");
                     }
-                    // TODO a supprimer plus tard
-                    else
-                        System.out.println(input);
                 }
             } catch (IOException e) {
                 e.printStackTrace();
@@ -111,7 +123,8 @@ public class Server {
          * @param numberOfHumans Nombre de joueurs humains dans la partie.
          * @param out Flux de sortie pour envoyer des messages au client.
          */
-        private void createGame(int numberOfHumans, PrintWriter out) {
+        private void createGame(int numberOfHumans, ArrayList<String> equipe1,  ArrayList<String> equipe2, PrintWriter out) {
+            System.out.println("create game\n");
             // Vérifie que le nombre de partie maximal n'est pas atteint
             if (gameQueue.size() >= MAX_GAMES) {
                 out.println("Erreur: Limite de parties atteinte.");
@@ -123,7 +136,7 @@ public class Server {
 
             // Initialiser la file d'attente pour cette partie
             gameQueue.put(gameId, new Paire<>(numberOfHumans, new ArrayList<>()));
-            out.println("Partie créée avec l'ID: " + gameId + ". Attendez que les joueurs se connectent.");
+            out.println(gameId);    // ENvoie le gameId au client
 
             // Attendre que le nombre de joueurs requis soit atteint
             synchronized (gameQueue) {
@@ -135,7 +148,7 @@ public class Server {
                     }
                 }
                 // Une fois le nombre atteint, créer la partie
-                createGameInstance(gameId, numberOfHumans, out);
+                createGameInstance(gameId, numberOfHumans, equipe1, equipe2, out);
             }
         }
 
@@ -146,7 +159,8 @@ public class Server {
          * @param numberOfHumans Nombre de joueurs humains.
          * @param out Flux de sortie pour informer le créateur de la partie.
          */
-        private void createGameInstance(String gameId, int numberOfHumans, PrintWriter out) {
+        private void createGameInstance(String gameId, int numberOfHumans, ArrayList<String> eq1, ArrayList<String> eq2, PrintWriter out) {
+            System.out.println("ciiiiiiiiiiiiiiiii\n\n");
             // Récupère le socket des clients de cette partie
             List<Socket> players = gameQueue.get(gameId).getSecond();
 
@@ -173,7 +187,7 @@ public class Server {
             Game game = new Game(gameId, equipe1, equipe2);
             games.put(gameId, game);
 
-            out.println("La partie " + gameId + " commence avec " + numberOfHumans + " joueurs et des bots.");
+            out.println("La partie " + gameId + " commence avec " + numberOfHumans + " joueurs humains");
 
             // Lancer la partie dans un thread séparé
             new Thread(game).start();
@@ -205,7 +219,7 @@ public class Server {
 
                 // Ajouter le joueur à la file d'attente
                 gameQueue.get(gameId).getSecond().add(socket);
-                out.println("Vous avez rejoint la partie " + gameId + ". Attendez que la partie commence.");
+                out.println(gameId);    // Envoie le gameId au client
 
                 // Notifier si le nombre de joueurs requis est atteint
                 if (gameQueue.get(gameId).getSecond().size() == numberOfHumans)

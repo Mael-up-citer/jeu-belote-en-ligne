@@ -3,16 +3,17 @@
 <?import javafx.scene.control.Button?>
 <?import javafx.scene.control.ComboBox?>
 <?import javafx.scene.control.Label?>
+<?import javafx.scene.control.ProgressIndicator?>
 <?import javafx.scene.layout.AnchorPane?>
 <?import javafx.scene.layout.BorderPane?>
 <?import javafx.scene.layout.FlowPane?>
 <?import javafx.scene.layout.HBox?>
 <?import javafx.scene.layout.VBox?>
 
-<AnchorPane maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="600.0" prefWidth="650.0" xmlns="http://javafx.com/javafx/23.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="GUI.Loby.CreateGameController">
+<AnchorPane fx:id="mainContenair" maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="600.0" prefWidth="650.0" xmlns="http://javafx.com/javafx/23.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="GUI.Loby.CreateGameController">
    <children>
       <ComboBox fx:id="selectNbHumain" layoutX="286.0" layoutY="70.0" promptText="1" visibleRowCount="3" />
-      <HBox layoutY="187.0" prefHeight="206.0" prefWidth="650.0">
+      <HBox fx:id="teamsContainer" layoutY="187.0" prefHeight="206.0" prefWidth="650.0">
          <children>
             <VBox fx:id="Equipe1" prefHeight="206.0" prefWidth="322.0">
                <children>
@@ -32,10 +33,7 @@
       <BorderPane layoutX="200.0" layoutY="348.0" prefHeight="63.0" prefWidth="252.0" />
       <Label fx:id="errorLabel" layoutX="312.0" layoutY="477.0" textFill="#f20f0f" />
       <Label layoutX="219.0" layoutY="27.0" text="Combien d'humains voulez vous ?" />
-      <FlowPane fx:id="poolPane" columnHalignment="CENTER" layoutX="188.0" layoutY="383.0" prefHeight="59.0" prefWidth="252.0">
-         <children>
-            <Button fx:id="joueurButton" mnemonicParsing="false" text="Moi" />
-         </children>
-      </FlowPane>
+      <FlowPane fx:id="poolPane" columnHalignment="CENTER" layoutX="188.0" layoutY="383.0" prefHeight="59.0" prefWidth="252.0" />
+      <ProgressIndicator fx:id="loadIndicator" layoutX="293.0" layoutY="457.0" progress="0.0" />
    </children>
 </AnchorPane>
