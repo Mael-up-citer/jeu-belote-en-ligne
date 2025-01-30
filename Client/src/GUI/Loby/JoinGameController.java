@@ -1,6 +1,7 @@
 package GUI.Loby;
 
 import GUI.Gui;
+import GUI.Game.WindowsGameController;
 import main.EventManager;
 import main.ServerConnection;
 
@@ -47,21 +48,28 @@ public class JoinGameController extends Gui {
     public void initialize() {
         loadIndicator.setVisible(false);
 
-        // S'abonner à l'événement "server_response" pour recevoir la réponse du serveur
-        eventManager.subscribe("server:message_received", (eventType, data) -> {
+        EventManager.EventListener[] listener = new EventManager.EventListener[1] ;
+        // Crée une référence à l'écouteur avant de s'abonner
+        listener[0] = (eventType, data) -> {
             if (data instanceof String) {
                 String serveurResponse = (String) data;
 
-                // Signaler la réponse dans l'UI (appeler un update UI via Platform.runLater)
+                // Signaler la réponse dans l'UI
                 Platform.runLater(() -> {
                     loadIndicator.setVisible(false);
                     if (serveurResponse.startsWith("Erreur"))
                         errorLabel.setText(serveurResponse);
-                    else
-                        loadGameWindows();
+                    else {
+                        WindowsGameController.setIdGame(serveurResponse);
+                        // Désabonnement en utilisant la même référence d'écouteur
+                        eventManager.unsubscribe("server:message_received", listener[0]);
+                        loadScene("/GUI/Game/game.fxml");
+                    }
                 });
             }
-        });
+        };
+        // S'abonner à l'événement "server:message_received"
+        eventManager.subscribe("server:message_received", listener[0]);
 
         validateButton.setOnAction(e -> {
             if (idGameText.getText() == null || idGameText.getText().isEmpty()) {
@@ -74,10 +82,6 @@ public class JoinGameController extends Gui {
         });
         
         returnButton.setOnAction(e -> goBack());
-    }
-
-    private void loadGameWindows() {
-        loadScene("/GUI/Game/game.fxml");
     }
 
     private void goBack() {

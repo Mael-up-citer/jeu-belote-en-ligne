@@ -1,6 +1,11 @@
 package GUI.Game;
 
+import java.util.HashMap;
+import java.util.Map;
+import java.util.function.Consumer;
+
 import GUI.Gui;
+import main.EventManager;
 
 import javafx.fxml.FXML;
 import javafx.scene.layout.Pane;
@@ -76,19 +81,69 @@ public class WindowsGameController extends Gui {
     // Le contrôleur a un ID de jeu
     private static String idGame;
 
-    // Méthode d'initialisation
+    // Table de dispatching pour associer les commandes à leurs méthodes
+    private final Map<String, Consumer<String>> COMMANDMAP = new HashMap<>();
+
+
     @FXML
     public void initialize() {
-        // Appliquer un effet de réduction de la luminosité sur tout le fond
+        initializeCOMMANDMAP();
 
-        // Initialiser le FlowPane central avec un indicateur de chargement
-        // Ajoute l'indicateur au FlowPane
-        progressIndicator.setVisible(true);
+        // S'abonner à l'événement "server_response" pour recevoir la réponse du serveur
+        EventManager.getInstance().subscribe("server:message_received", (eventType, data) -> {
+            if (data instanceof String) {
+                // Diviser la chaîne en un tableau de mots
+                String[] serveurResponse = ((String) data).split(" ");
+                Consumer<String> handler = COMMANDMAP.get(serveurResponse[0]);
+
+                // Si la commande est trouvée, l'exécuter
+                if (handler != null)
+                    Platform.runLater( () -> handler.accept(serveurResponse[1]));  // Appel de la méthode associée à la commande
+            }
+        });
+
+        // Créer un fond assombri (un Pane transparent noir) qui couvre tout sauf dialogPane
+        Pane dimmingPane = new Pane();
+        dimmingPane.setStyle("-fx-background-color: rgba(0, 0, 0, 0.5);");  // Fond sombre mais transparent
+        dimmingPane.prefWidthProperty().bind(mainPane.widthProperty());  // Ajuste la largeur du dimmingPane à la largeur de mainPane
+        dimmingPane.prefHeightProperty().bind(mainPane.heightProperty()); // Ajuste la hauteur du dimmingPane à la hauteur de mainPane
+
+        // Ajouter le dimmingPane à mainPane
+        mainPane.getChildren().add(dimmingPane);
+
+        // Réajouter dialogPane au-dessus du dimmingPane
+        mainPane.getChildren().remove(dialogPane);  // Retirer dialogPane temporairement
+        mainPane.getChildren().add(dialogPane);    // Réajouter dialogPane après le dimmingPane
+
+        // Appliquer un fond semi-transparent à dialogPane
+        dialogPane.setStyle("-fx-background-color: rgba(255, 255, 255, 0.8);");  // Blanc opaque à 80%
+    
+        // Appliquer une ombre sur dialogPane pour le faire ressortir
+        DropShadow dropShadow = new DropShadow();
+        dropShadow.setRadius(10);  // Rayon de l'ombre
+        dropShadow.setOffsetX(5);  // Décalage de l'ombre sur l'axe X
+        dropShadow.setOffsetY(5);  // Décalage de l'ombre sur l'axe Y
+        dropShadow.setColor(Color.rgb(0, 0, 0, 0.5));  // Couleur de l'ombre (noir avec une opacité de 0.5)
+        dialogPane.setEffect(dropShadow);  // Applique l'ombre sur dialogPane
+    
+        mainPane.setMouseTransparent(true);  // Désactive toute interaction avec mainPane
 
         // Définir un message sur le nombre de joueurs
-        nbPlayer.setText("1/4 joueurs connectés");
+        idGameLabel.setText("id de la partie: " + idGame);
+        nbPlayer.setText("en attente de joueurs");
+    }
 
-        
+    /**
+     * Méthode d'initialisation de la table de dispatching. 
+     * Elle associe chaque commande à une méthode de traitement correspondante.
+     */
+    public void initializeCOMMANDMAP() {
+        COMMANDMAP.put("PlayerJoin", this::onPlayerJoin);
+        //COMMANDMAP.put("DROP DATABASES", unused -> processDROPDATABASESCommand());
+    }
+
+    private void onPlayerJoin(String message) {
+        nbPlayer.setText("nombre de joueurs: "+message);
     }
 
     public static void setIdGame(String idG) {

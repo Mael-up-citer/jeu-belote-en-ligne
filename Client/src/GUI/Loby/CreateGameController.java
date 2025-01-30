@@ -60,13 +60,15 @@ public class CreateGameController extends Gui {
     // Utilisation du singleton EventManager
     private static EventManager eventManager = EventManager.getInstance();
 
+
     @FXML
     public void initialize() {
-        // S'abonner à l'événement "server_response" pour recevoir la réponse du serveur
-        eventManager.subscribe("server:message_received", (eventType, data) -> {
+        EventManager.EventListener[] listener = new EventManager.EventListener[1] ;
+        // Crée une référence à l'écouteur avant de s'abonner
+        listener[0] = (eventType, data) -> {
             if (data instanceof String) {
                 String serveurResponse = (String) data;
-
+    
                 // Signaler la réponse dans l'UI (appeler un update UI via Platform.runLater)
                 Platform.runLater(() -> {
                     loadIndicator.setVisible(false);
@@ -74,26 +76,32 @@ public class CreateGameController extends Gui {
                         errorLabel.setText(serveurResponse);
                     else {
                         WindowsGameController.setIdGame(serveurResponse);
+                        // Désabonnement en utilisant la même référence d'écouteur
+                        eventManager.unsubscribe("server:message_received", listener[0]);
                         loadScene("/GUI/Game/game.fxml");
                     }
                 });
             }
-        });
-
+        };
+    
+        // S'abonner à l'événement "server:message_received"
+        eventManager.subscribe("server:message_received", listener[0]);
+    
         // Ajout des choix à la ComboBox
         selectNbHumain.getItems().addAll("0", "1", "2", "3", "4");
         selectNbHumain.setOnAction(event -> displayAll());
         retournButton.setOnAction(event -> goBack());
-
+    
         teamsContainer.setVisible(false);  // Cache le conteneur des équipes
         validateButton.setOnAction(e -> askToServer());
-
+    
         // Activation du drag & drop pour les équipes
         setupDragAndDrop(Equipe1);
         setupDragAndDrop(Equipe2);
-
+    
         loadIndicator.setVisible(false);
     }
+    
 
     /**
      * Met à jour l'affichage des joueurs et bots en fonction du nombre d'humains sélectionné.

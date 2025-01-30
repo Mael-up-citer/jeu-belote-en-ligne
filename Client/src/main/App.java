@@ -2,6 +2,7 @@ package main;
 
 import GUI.Gui;
 import GUI.Loby.LobyGuiController;
+
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.stage.Stage;

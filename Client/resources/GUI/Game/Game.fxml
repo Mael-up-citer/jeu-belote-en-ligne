@@ -72,8 +72,8 @@
       <Label layoutX="21.0" layoutY="89.0" text="Atout en cour" />
       <Pane fx:id="dialogPane" layoutX="381.0" layoutY="146.0" prefHeight="200.0" prefWidth="200.0">
          <children>
-            <Label fx:id="idGame" layoutX="86.0" layoutY="19.0" />
-            <Label fx:id="nbPlayer" layoutX="85.0" layoutY="81.0" />
+            <Label fx:id="idGameLabel" alignment="CENTER" contentDisplay="CENTER" layoutX="24.0" layoutY="53.0" maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="17.0" prefWidth="150.0" textAlignment="CENTER" wrapText="true" />
+            <Label fx:id="nbPlayer" layoutX="24.0" layoutY="91.0" maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="17.0" prefWidth="150.0" textAlignment="CENTER" />
             <ProgressIndicator fx:id="progressIndicator" layoutX="82.0" layoutY="139.0" progress="0.0" />
          </children>
       </Pane>
