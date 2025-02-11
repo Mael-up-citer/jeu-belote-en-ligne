@@ -56,7 +56,7 @@ public class CreateGameController extends Gui {
 
     private final ArrayList<Button> humainButtons = new ArrayList<>();  // Liste des boutons des joueurs humains
     private final ArrayList<ComboBox<String>> botBoxes = new ArrayList<>();  // Liste des ComboBox des IA
-
+    private int numberOfHumans; // Nombre d'humains de la partie
     // Utilisation du singleton EventManager
     private static EventManager eventManager = EventManager.getInstance();
 
@@ -86,7 +86,7 @@ public class CreateGameController extends Gui {
     
         // S'abonner à l'événement "server:message_received"
         eventManager.subscribe("server:message_received", listener[0]);
-    
+
         // Ajout des choix à la ComboBox
         selectNbHumain.getItems().addAll("0", "1", "2", "3", "4");
         selectNbHumain.setOnAction(event -> displayAll());
@@ -94,7 +94,7 @@ public class CreateGameController extends Gui {
     
         teamsContainer.setVisible(false);  // Cache le conteneur des équipes
         validateButton.setOnAction(e -> askToServer());
-    
+
         // Activation du drag & drop pour les équipes
         setupDragAndDrop(Equipe1);
         setupDragAndDrop(Equipe2);
@@ -107,6 +107,11 @@ public class CreateGameController extends Gui {
      * Met à jour l'affichage des joueurs et bots en fonction du nombre d'humains sélectionné.
      */
     private void displayAll() {
+        try {
+            numberOfHumans = Integer.parseInt(selectNbHumain.getValue());
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
         teamsContainer.setVisible(true);
 
         poolPane.getChildren().clear();  // Réinitialiser le pool
@@ -124,24 +129,20 @@ public class CreateGameController extends Gui {
         humainButtons.clear();
         botBoxes.clear();
 
-        int nbHumains = Integer.parseInt(selectNbHumain.getValue());
-
         // Ajout du joueur principal "moi"
-        if (nbHumains > 0) {
+        if (numberOfHumans > 0) {
             Button btn = createDraggableButton("Moi");
             humainButtons.add(btn);
             poolPane.getChildren().add(btn);
         }
-
         // Ajout des autres joueurs humains
-        for (int i = 1; i < nbHumains; i++) {
+        for (int i = 1; i < numberOfHumans; i++) {
             Button btn = createDraggableButton("Joueur " + i);
             humainButtons.add(btn);
             poolPane.getChildren().add(btn);
         }
-
         // Ajout des bots
-        for (int i = nbHumains; i < NBPLAYER; i++) {
+        for (int i = numberOfHumans; i < NBPLAYER; i++) {
             ComboBox<String> botBox = new ComboBox<>();
             botBox.getItems().addAll("Débutant", "Intermédiaire", "Expert");
             botBox.setPromptText("Bot"+i); // Texte affiché par défaut
@@ -281,7 +282,7 @@ public class CreateGameController extends Gui {
             }
 
             StringBuilder message = new StringBuilder();
-            message.append("create_game;");
+            message.append("create_game ");
 
             for (int i = 1; i <= 2; i++) { // On commence à 1 pour éviter le label
                 Node nodeEquipe1 = Equipe1.getChildren().get(i);
@@ -290,7 +291,9 @@ public class CreateGameController extends Gui {
                 message.append(getPlayerInfo(nodeEquipe1)).append(";");
                 message.append(getPlayerInfo(nodeEquipe2)).append(";");
             }
-            
+            message.append(" ");
+            message.append(numberOfHumans);
+
             System.out.println(message);
             ServerConnection.getInstance().sendToServer(message.toString());
         }
@@ -303,7 +306,7 @@ public class CreateGameController extends Gui {
             if (node instanceof Button) // Si c'est un joueur humain
                 return "humain";
             else
-                return "bot,"+((ComboBox<?>) node).getValue();
+                return ""+((ComboBox<?>) node).getValue();
         } catch (Exception e) {
             System.out.println(e.getMessage());
             return null;

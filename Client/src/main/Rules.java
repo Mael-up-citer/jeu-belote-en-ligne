@@ -1,14 +1,11 @@
 package main;
 
-//import src.GUI.GameGui;
-import main.Plis;
 
 import java.util.List;
 
 public class Rules {
-    //private GameGui gui;
 
-    public static List<Carte> playable(Plis plis) {
+    public static List<Carte> playable() {
         // Regarde ce qui est demandé
         // Si atout
             // Si on a de l'atout on doit monter si on ne peut pas on met une plus petite

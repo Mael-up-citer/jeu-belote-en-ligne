@@ -5,8 +5,8 @@ import src.main.Paquet;
 public class Plis {
     // Plis regroupe 4 cartes
     private Paquet.Carte[] plis = new Paquet.Carte[4];
-    private int bigestValue = 0;    // nb point de la plus grosse carte
     private int index = 0;  // Position d'insertion dans le tableau
+    private int bigestValue = 0;    // nb point de la plus grosse carte
     private Joueur maitre;  // Personne à qui appartient le plis
 
     // Ajoute une carte avec une valeur percu example si la couleur n'est pas celle demandé la carte ne compte pas mais ses points après si

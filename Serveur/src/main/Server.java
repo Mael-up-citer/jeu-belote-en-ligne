@@ -69,36 +69,8 @@ public class Server {
                 // Boucle pour traiter les commandes envoyées par le client
                 while ((input = in.readLine()) != null) {
                     if (input.startsWith("create_game")) {
-                        String[] str = input.split(";");
-                        ArrayList<String> equipe2 = new ArrayList<>();
-                        ArrayList<String> equipe1 = new ArrayList<>();
-                        int numberOfHumans = 0;
-
-                        // Remplie l'equipe 1
-                        for (int i = 1; i < 3; i++) {
-                            String joueur;
-                            if (str[i].startsWith("humain")) {
-                                joueur = str[i];
-                                numberOfHumans++;
-                            }
-                            else {
-                                joueur = str[i].split(",")[1];
-                            }
-                            equipe1.add(joueur);
-                        }
-                        // Remplie l'equipe 2
-                        for (int i = 3; i < str.length; i++) {
-                            String joueur;
-                            if (str[i].startsWith("humain")) {
-                                joueur = str[i];
-                                numberOfHumans++;
-                            }
-                            else {
-                                joueur = str[i].split(",")[1];
-                            }
-                            equipe2.add(joueur);
-                        }
-                        createGame(numberOfHumans, equipe1, equipe2, out);
+                        String[] str = input.split("\\s");
+                        createGame(Integer.parseInt(str[2]), str[1], out);
                     }
                     else if (input.startsWith("join_game")) {
                         // Commande pour rejoindre une partie existante
@@ -123,20 +95,24 @@ public class Server {
          * @param numberOfHumans Nombre de joueurs humains dans la partie.
          * @param out Flux de sortie pour envoyer des messages au client.
          */
-        private void createGame(int numberOfHumans, ArrayList<String> equipe1,  ArrayList<String> equipe2, PrintWriter out) {
-            System.out.println("create game\n");
-            // Vérifie que le nombre de partie maximal n'est pas atteint
-            if (gameQueue.size() >= MAX_GAMES) {
-                out.println("Erreur: Limite de parties atteinte.");
-                return;
+        private void createGame(int numberOfHumans, String equipes, PrintWriter out) {
+            synchronized (gameQueue) {
+                // Vérifie que le nombre de partie maximal n'est pas atteint
+                if (gameQueue.size() >= MAX_GAMES) {
+                    out.println("Erreur: Limite de parties atteinte.");
+                    return;
+                }
             }
 
             // Générer un identifiant unique pour la partie
             String gameId = "game_" + (++gameCounter);
 
-            // Initialiser la file d'attente pour cette partie
-            gameQueue.put(gameId, new Paire<>(numberOfHumans, new ArrayList<>()));
-            out.println(gameId);    // ENvoie le gameId au client
+            synchronized (gameQueue) {
+                // Initialiser la file d'attente pour cette partie
+                gameQueue.put(gameId, new Paire<>(numberOfHumans, new ArrayList<>()));
+                gameQueue.get(gameId).getSecond().add(socket);  // Ajoute le client courant
+            }
+            out.println(gameId);    // Envoie le gameId au client
 
             // Attendre que le nombre de joueurs requis soit atteint
             synchronized (gameQueue) {
@@ -148,7 +124,7 @@ public class Server {
                     }
                 }
                 // Une fois le nombre atteint, créer la partie
-                createGameInstance(gameId, numberOfHumans, equipe1, equipe2, out);
+                createGameInstance(gameId, numberOfHumans, equipes, out);
             }
         }
 
@@ -159,38 +135,50 @@ public class Server {
          * @param numberOfHumans Nombre de joueurs humains.
          * @param out Flux de sortie pour informer le créateur de la partie.
          */
-        private void createGameInstance(String gameId, int numberOfHumans, ArrayList<String> eq1, ArrayList<String> eq2, PrintWriter out) {
-            System.out.println("ciiiiiiiiiiiiiiiii\n\n");
+        private void createGameInstance(String gameId, int numberOfHumans, String equipes, PrintWriter out) {
             // Récupère le socket des clients de cette partie
-            List<Socket> players = gameQueue.get(gameId).getSecond();
-
-            // Création des deux équipes
-            Equipe equipe1 = new Equipe();
-            Equipe equipe2 = new Equipe();
-
-            // Ajouter les joueurs humains dans les équipes de manière alternée
-            for (int i = 0; i < numberOfHumans; i++) {
-                if (i % 2 == 0)
-                    equipe1.addJoueur(new Humain("Joueur"+i, players.get(i)));
-                else
-                    equipe2.addJoueur(new Humain("Joueur"+i, players.get(i)));
-            }
-
-            // Compléter avec des bots si nécessaire
-            while (equipe1.getJoueurs().size() < 2)
-                equipe1.addJoueur(new Bot(null));
-
-            while (equipe2.getJoueurs().size() < 2)
-                equipe2.addJoueur(new Bot(null));
+            Paire<Equipe, Equipe> equipeInstance = parseEquipe(gameQueue.get(gameId).getSecond(), equipes);
 
             // Instancier la partie et l'ajouter à la liste des parties actives
-            Game game = new Game(gameId, equipe1, equipe2);
-            games.put(gameId, game);
-
-            out.println("La partie " + gameId + " commence avec " + numberOfHumans + " joueurs humains");
+            Game game = new Game(gameId, equipeInstance.getFirst(), equipeInstance.getSecond());
+            synchronized (games) {
+                games.put(gameId, game);
+            }
 
             // Lancer la partie dans un thread séparé
             new Thread(game).start();
+        }
+
+        private Paire<Equipe, Equipe> parseEquipe(List<Socket> sockets, String str) {
+            String[] input = str.split(";");
+            Equipe equipe1 = new Equipe();
+            Equipe equipe2 = new Equipe();
+            int k = 0;  // Ind d'accès dans la liste des sockets
+            int j = 0;   // numero du bot courant
+
+            // Remplie l'equipe 1
+            for (int i = 0; i < 2; i++) {
+                if (input[i].startsWith("humain")) {
+                    equipe1.addJoueur(new Humain("Joueur"+k, sockets.get(k)));
+                    k++;
+                }
+                else {
+                    equipe1.addJoueur(BotFactory.creeBot("Bot"+j, input[i]));
+                    j++;
+                }
+            }
+            // Remplie l'equipe 2
+            for (int i = 2; i < 4; i++) {
+                if (input[i].startsWith("humain")) {
+                    equipe2.addJoueur(new Humain("Joueur"+k, sockets.get(k)));
+                    k++;
+                }
+                else {
+                    equipe2.addJoueur(BotFactory.creeBot("Bot"+j, input[i]));
+                    j++;
+                }
+            }
+            return new Paire<Equipe,Equipe>(equipe1, equipe2);
         }
 
         /**

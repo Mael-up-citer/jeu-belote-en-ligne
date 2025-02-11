@@ -36,7 +36,7 @@ if [[ $? -eq 0 ]]; then
   java --module-path "$JAVAFX_SDK" --add-modules $JAVAFX_MODULES -cp "$BIN_DIR" "$MAIN_CLASS"
 
   # Supprimer les fichiers .class générés après l'exécution (optionnel)
-  rm -r "$BIN_DIR"/* &> /dev/null
+  rm -rf "$BIN_DIR"/* &> /dev/null
 else
   echo "Erreur lors de la compilation."
 fi

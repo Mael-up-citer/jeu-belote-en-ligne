@@ -41,7 +41,7 @@ if [[ $COMPILE_STATUS -eq 0 ]]; then
   java --module-path "$JAVAFX_SDK" --add-modules $JAVAFX_MODULES -cp "$BIN_DIR:$RESOURCES_DIR" "$MAIN_CLASS"
 
     # Suppression des fichiers compilés après exécution
-    #rm -rf "$BIN_DIR"/*
+    rm -rf "$BIN_DIR"/*
     echo "Le dossier bin a été nettoyé."
 else
   echo "Erreur lors de la compilation."

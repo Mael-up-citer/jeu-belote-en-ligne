@@ -95,8 +95,10 @@ public class ServerConnection {
         try {
             String message;
             // Lecture des messages envoyés par le serveur
-            while ((message = in.readLine()) != null)
+            while ((message = in.readLine()) != null) {
+                System.out.println("Serverconnection: "+message);
                 eventManager.publish("server:message_received", message);
+            }
 
         } catch (IOException e) {
             // Si le serveur est déconnecté ou iniaténiable
