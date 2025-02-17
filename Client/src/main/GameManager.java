@@ -13,9 +13,6 @@ import java.util.List;
 public class GameManager {
     private final String NAMEPUBLISH = "GameManager:message_received";
 
-    // Carte de la main du joueur
-    private static Map<Carte.Couleur, List<Carte>> playerHand = new HashMap<>();
-
     // Table de dispatching pour associer les commandes à leurs méthodes pour la com server->GameManager
     private final Map<String, Consumer<String>> COMMANDMAPSERVER = new HashMap<>();
     // Table de dispatching pour associer les commandes à leurs méthodes pour la com GameGUI->GameManager
@@ -23,7 +20,6 @@ public class GameManager {
 
 
     public GameManager() {
-        System.out.println("GameManager existe enfin");
         // S'abonne à l'événement "server_response" pour recevoir la réponse du serveur
         EventManager.getInstance().subscribe("server:message_received", (eventType, data) -> {
             if (data instanceof String) {
@@ -37,16 +33,16 @@ public class GameManager {
             }
         });
 
-        // S'abonne à l'événement "Gui_response" pour recevoir la réponse du serveur
+        // S'abonne à l'événement "Gui_response" pour recevoir la réponse de la GUI
         EventManager.getInstance().subscribe("GameGui:Gui_response", (eventType, data) -> {
             if (data instanceof String) {
                 // Diviser la chaîne en un tableau de mots
-                String[] serveurResponse = ((String) data).split(":");
-                Consumer<String> handler = COMMANDMAPClIENT.get(serveurResponse[0]);
+                String[] guiResponse = ((String) data).split(":");
+                Consumer<String> handler = COMMANDMAPClIENT.get(guiResponse[0]);
 
                 // Si la commande est trouvée, l'exécuter
                 if (handler != null)
-                    handler.accept(serveurResponse[1]);  // Appel de la méthode associée à la commande
+                    handler.accept(guiResponse[1]);  // Appel de la méthode associée à la commande
             }
         });
 
@@ -64,7 +60,7 @@ public class GameManager {
         COMMANDMAPSERVER.put("SetMain", this::onReceiveHand);
         COMMANDMAPSERVER.put("SetMiddleCard", this::SetMiddleCard);
         COMMANDMAPSERVER.put("GetAtout1", unused -> askAtout1());
-        COMMANDMAPSERVER.put("GetAtout1", unused -> askAtout2());
+        COMMANDMAPSERVER.put("GetAtout2", unused -> askAtout2());
         COMMANDMAPSERVER.put("AtoutIsSet", this::atoutIsSet);
     }
 
@@ -74,8 +70,8 @@ public class GameManager {
      */
     private void initializeCOMMANDMAPClient() {
         // Commande pour la comunication arrivant de la GUI
+        COMMANDMAPClIENT.put("AtoutChoisi", this::SetAtout);
         COMMANDMAPClIENT.put("CardPlay", this::onCardPlay);
-        COMMANDMAPClIENT.put("ParleAtout", this::SetAtout);
     }
 
 
@@ -97,14 +93,16 @@ public class GameManager {
     private void onReceiveHand(String message) {
         if (message.equals("null"))
             resetPlayerHand();  // Si le message est "null", on réinitialise la main
-        else {
-            playerHand = parseHand(message);
+        else
             // Envoie à la GUI les cartes à afficher sous forme de leur nom (type + "De" + couleur)
-            EventManager.getInstance().publish(NAMEPUBLISH, "PlayerHand:"+formatForGui());
-        }
+            EventManager.getInstance().publish(NAMEPUBLISH, "PlayerHand:"+formatForGui(message));
     }
 
-    private Map<Carte.Couleur, List<Carte>> parseHand(String message) {
+    // Parse la String format: {CARREAU=[], TREFLE=[VALLETDeTREFLE, DAMMEDeTREFLE, ROIDeTREFLE], PIQUE=[ROIDePIQUE, ASDePIQUE], COEUR=[]}
+    // Vers une string TypeDeCouleur
+    private String formatForGui(String message) {
+        StringBuilder res = new StringBuilder();
+
         // Supprimer les accolades
         message = message.substring(1, message.length() - 1);
 
@@ -115,27 +113,17 @@ public class GameManager {
         while (matcher.find()) {
             String couleurStr = matcher.group(1);  // Récupère la couleur
             String cartesStr = matcher.group(2);   // Récupère [liste de cartes]
-
-            try {
-                Carte.Couleur couleur = Carte.Couleur.valueOf(couleurStr);
-                List<Carte> cartes = new ArrayList<>();
-
-                if (!cartesStr.isEmpty()) {
-                    // Séparer chaque carte
-                    String[] cartesArray = cartesStr.split(", ");
-
-                    for (String carteStr : cartesArray) {
-                        String[] parts = carteStr.split("De");
-                        Carte.Type type = Carte.Type.valueOf(parts[0]);
-                        cartes.add(new Carte(couleur, type));
-                    }
-                }
-                playerHand.put(couleur, cartes);
-            } catch (IllegalArgumentException e) {
-                System.err.println("Erreur: Couleur ou type inconnu -> " + couleurStr);
-            }
+            // Vérifier si la liste de cartes n'est pas vide
+            if (!cartesStr.isEmpty())
+                // Ajouter la couleur suivie des cartes séparées par un point-virgule
+                res.append(cartesStr.replace(", ", ";")).append(";");
         }
-        return playerHand;
+
+        // Retirer le dernier point-virgule si la chaîne n'est pas vide
+        if (res.length() > 0)
+            res.setLength(res.length() - 1);
+        
+        return res.toString();
     }
 
     // Dit à la GUI de retourner la carte du milieu
@@ -145,29 +133,22 @@ public class GameManager {
 
     // Transmet à la GUI qu'on attend un atout
     private void askAtout1() {
-        EventManager.getInstance().publish(NAMEPUBLISH, "askAtout1:$");
+        EventManager.getInstance().publish(NAMEPUBLISH, "GetAtout1:$");
     }
 
     // Transmet à la GUI qu'on attend un atout
     private void askAtout2() {
-        EventManager.getInstance().publish(NAMEPUBLISH, "askAtout2:$");
+        EventManager.getInstance().publish(NAMEPUBLISH, "GetAtout2:$");
     }
 
     // Quand l'atout a été définie
     private void atoutIsSet(String atout) {
         EventManager.getInstance().publish(NAMEPUBLISH, "AtoutIsSet:$");
-
-        // Marque dans le code local que l'atout est 'atout'
-        try {   // Récupère la couleur
-            Carte.Couleur res = Carte.Couleur.valueOf(atout);
-            res.setIsAtout(true);   // Défini que l'atout est cette couleur
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
     }
 
     // Vide la main du joueur et previens la gui que la main a changé
     private void resetPlayerHand() {
+        // Envoie un message à la GUI pour désaficher les cartes
         EventManager.getInstance().publish(NAMEPUBLISH, "ClearHand:$");
     }
 
@@ -184,10 +165,7 @@ public class GameManager {
 
     // Transmet au serveur l'atout choisie
     private void SetAtout(String atout) {
-        if (atout.isEmpty())
-            ServerConnection.getInstance().sendToServer("SetAtout:" + true); // Envoie au serveur sous forme de chaîne
-        else
-            ServerConnection.getInstance().sendToServer("SetAtout:" + false); // Envoie au serveur sous forme de chaîne
+        ServerConnection.getInstance().sendToServer(atout); // Envoie au serveur sous forme de chaîne
     }
 
 
@@ -195,18 +173,4 @@ public class GameManager {
      * Méthodes de auxiliaires
      * ###############################
      */
-
-    // Format la main pour que la GUI puisse afficher la carte associé
-    // Format à suivre: (type + "De" + couleur)
-    private String formatForGui() {
-        StringBuilder res = new StringBuilder();
-
-        for (List<Carte> cartes : playerHand.values())
-            for (Carte carte : cartes)
-                res.append(carte.toString()+";");
-
-        res.deleteCharAt(res.length()-1); // Enlève le dernier ';'
-
-        return res.toString();
-    }
 }

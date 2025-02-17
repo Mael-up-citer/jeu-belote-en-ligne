@@ -13,7 +13,7 @@ public class Server {
     private static final int PORT = 12345; // Port d'écoute
     private static final int MAX_GAMES = 4; // Nombre maximum de parties simultanées
     private static final int MAX_PLAYERS = 4; // Nombre maximum de joueurs par partie
-    private static final Map<String, Paire<Integer, List<Socket>>> gameQueue = new HashMap<>(); // File d'attente des joueurs par partie
+    private static final Map<String, Paire<Integer, List<ClientHandler>>> gameQueue = new HashMap<>(); // File d'attente des joueurs par partie
 
     private static Map<String, Game> games = new HashMap<>(); // Liste des parties en cours
     private static int gameCounter = 0; // Compteur pour générer des identifiants de partie
@@ -44,6 +44,9 @@ public class Server {
         private String playerName; // Nom du joueur (éventuellement utilisé pour l'identité)
         private String gameId; // ID de la partie à laquelle le joueur appartient
         private PrintWriter out; // Sortie pour envoyer des messages au client
+        private BufferedReader in;  // Entrée des comunications clients
+
+        private boolean isRunning = true;  // Flag pour indiquer si le thread doit continuer à tourner
 
         /**
          * Constructeur initialisant le gestionnaire avec le socket du client.
@@ -60,17 +63,17 @@ public class Server {
         @Override
         public void run() {
             // Crée les flux d'entrées et de sortie du client
-            try (BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-                 PrintWriter out = new PrintWriter(socket.getOutputStream(), true)) {
+            try {
+                in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+                out = new PrintWriter(socket.getOutputStream(), true);
 
-                this.out = out; // Initialiser le flux de sortie
                 String input;
 
                 // Boucle pour traiter les commandes envoyées par le client
-                while ((input = in.readLine()) != null) {
+                while (isRunning && (input = in.readLine()) != null) {
                     if (input.startsWith("create_game")) {
                         String[] str = input.split("\\s");
-                        createGame(Integer.parseInt(str[2]), str[1], out);
+                        createGame(Integer.parseInt(str[2]), str[1]);
                     }
                     else if (input.startsWith("join_game")) {
                         // Commande pour rejoindre une partie existante
@@ -95,7 +98,7 @@ public class Server {
          * @param numberOfHumans Nombre de joueurs humains dans la partie.
          * @param out Flux de sortie pour envoyer des messages au client.
          */
-        private void createGame(int numberOfHumans, String equipes, PrintWriter out) {
+        private void createGame(int numberOfHumans, String equipes) {
             synchronized (gameQueue) {
                 // Vérifie que le nombre de partie maximal n'est pas atteint
                 if (gameQueue.size() >= MAX_GAMES) {
@@ -110,7 +113,7 @@ public class Server {
             synchronized (gameQueue) {
                 // Initialiser la file d'attente pour cette partie
                 gameQueue.put(gameId, new Paire<>(numberOfHumans, new ArrayList<>()));
-                gameQueue.get(gameId).getSecond().add(socket);  // Ajoute le client courant
+                gameQueue.get(gameId).getSecond().add(this);  // Ajoute le client courant
             }
             out.println(gameId);    // Envoie le gameId au client
 
@@ -124,7 +127,7 @@ public class Server {
                     }
                 }
                 // Une fois le nombre atteint, créer la partie
-                createGameInstance(gameId, numberOfHumans, equipes, out);
+                createGameInstance(gameId, numberOfHumans, equipes);
             }
         }
 
@@ -135,7 +138,7 @@ public class Server {
          * @param numberOfHumans Nombre de joueurs humains.
          * @param out Flux de sortie pour informer le créateur de la partie.
          */
-        private void createGameInstance(String gameId, int numberOfHumans, String equipes, PrintWriter out) {
+        private void createGameInstance(String gameId, int numberOfHumans, String equipes) {
             // Récupère le socket des clients de cette partie
             Paire<Equipe, Equipe> equipeInstance = parseEquipe(gameQueue.get(gameId).getSecond(), equipes);
 
@@ -145,11 +148,15 @@ public class Server {
                 games.put(gameId, game);
             }
 
+            // Ferme tout les clients Handler de cette partie
+            for(ClientHandler ch : gameQueue.get(gameId).getSecond())
+                ch.stopHandler();
+
             // Lancer la partie dans un thread séparé
             new Thread(game).start();
         }
 
-        private Paire<Equipe, Equipe> parseEquipe(List<Socket> sockets, String str) {
+        private Paire<Equipe, Equipe> parseEquipe(List<ClientHandler> sockets, String str) {
             String[] input = str.split(";");
             Equipe equipe1 = new Equipe();
             Equipe equipe2 = new Equipe();
@@ -159,7 +166,7 @@ public class Server {
             // Remplie l'equipe 1
             for (int i = 0; i < 2; i++) {
                 if (input[i].startsWith("humain")) {
-                    equipe1.addJoueur(new Humain("Joueur"+k, sockets.get(k)));
+                    equipe1.addJoueur(new Humain("Joueur"+k, sockets.get(k).socket, sockets.get(k).in, sockets.get(k).out));
                     k++;
                 }
                 else {
@@ -170,7 +177,7 @@ public class Server {
             // Remplie l'equipe 2
             for (int i = 2; i < 4; i++) {
                 if (input[i].startsWith("humain")) {
-                    equipe2.addJoueur(new Humain("Joueur"+k, sockets.get(k)));
+                    equipe2.addJoueur(new Humain("Joueur"+k, sockets.get(k).socket, sockets.get(k).in, sockets.get(k).out));
                     k++;
                 }
                 else {
@@ -206,13 +213,18 @@ public class Server {
                 }
 
                 // Ajouter le joueur à la file d'attente
-                gameQueue.get(gameId).getSecond().add(socket);
+                gameQueue.get(gameId).getSecond().add(this);
                 out.println(gameId);    // Envoie le gameId au client
 
                 // Notifier si le nombre de joueurs requis est atteint
                 if (gameQueue.get(gameId).getSecond().size() == numberOfHumans)
                     gameQueue.notifyAll();
             }
+        }
+
+        // Ordonne à la class de s'arrêter
+        public void stopHandler() {
+            isRunning = false;  // Met le flag à false pour arrêter la boucle dans le run
         }
     }
 }

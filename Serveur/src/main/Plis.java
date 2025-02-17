@@ -1,24 +1,35 @@
 package src.main;
 
-import src.main.Paquet;
 
 public class Plis {
     // Plis regroupe 4 cartes
     private Paquet.Carte[] plis = new Paquet.Carte[4];
     private int index = 0;  // Position d'insertion dans le tableau
-    private int bigestValue = 0;    // nb point de la plus grosse carte
+    private Paquet.Carte powerfullCard = null;    // Carte la plus forte du plis
     private Joueur maitre;  // Personne à qui appartient le plis
+
 
     // Ajoute une carte avec une valeur percu example si la couleur n'est pas celle demandé la carte ne compte pas mais ses points après si
     public void addCard(Joueur j, Paquet.Carte carte, int perceptValue) throws IndexOutOfBoundsException {
         // Si la nouvelle carte est la plus forte
-        if (bigestValue < perceptValue) {
-            bigestValue = perceptValue;
+        if (carte.compareTo(powerfullCard) > 0) {
+            powerfullCard = carte;
             maitre = j;
         }
         // Add la carte au plis
         plis[index] = carte;
         index++;
+    }
+
+    // Reset le pli pour un faire un nouveau
+    public void reset() {
+        // Enlève les cartes du pli
+        for(int i = 0; i < plis.length; i++)
+            plis[i] = null;
+
+        index = 0;
+        maitre = null;
+        powerfullCard = null;
     }
 
     // Calcule le nombre de point d'un plis
@@ -35,16 +46,11 @@ public class Plis {
         return plis;
     }
 
-    public void setPlis(Paquet.Carte[] plis) {
-        this.plis = plis;
+    public Paquet.Carte getPowerfullCard() {
+        return powerfullCard;
     }
 
-    public void reset() {
-        for(int i = 0; i < plis.length; i++)
-            plis[i] = null;
-        
-        index = 0;
-        maitre = null;
-        bigestValue = 0;
+    public Joueur getMaitre() {
+        return maitre;
     }
 }

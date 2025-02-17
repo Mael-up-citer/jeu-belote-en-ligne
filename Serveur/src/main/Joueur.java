@@ -1,14 +1,13 @@
 package src.main;
 
+import src.main.Paquet.Carte;
+
 import java.io.BufferedReader;
 import java.io.PrintWriter;
 import java.net.Socket;
 import java.util.*;
 import java.util.function.Function;
 
-import src.main.Paquet.Carte;
-
-import java.io.InputStreamReader;
 import java.io.IOException;
 
 
@@ -16,9 +15,9 @@ import java.io.IOException;
  * Classe abstraite représentant un joueur, qu'il soit humain ou un bot.
  */
 public abstract class Joueur {
-    private Equipe equipe; // L'équipe à laquelle appartient le joueur
-    private String nom; // Le nom du joueur
-    private HashMap<Paquet.Carte.Couleur, ArrayList<Paquet.Carte>> main; // La main du joueur, organisée par couleur
+    protected Equipe equipe; // L'équipe à laquelle appartient le joueur
+    protected String nom; // Le nom du joueur
+    protected HashMap<Paquet.Carte.Couleur, List<Paquet.Carte>> main; // La main du joueur, organisée par couleur
 
     /**
      * Constructeur par défaut de la classe Joueur.
@@ -45,6 +44,12 @@ public abstract class Joueur {
         this.main = new HashMap<>();
         for (Paquet.Carte.Couleur couleur : Paquet.Carte.Couleur.values())
             main.put(couleur, new ArrayList<>());
+    }
+
+    // Vide les listes de cartes
+    public void clearMain() {
+        for (List<Carte> list : main.values())
+            list.clear();
     }
 
     /**
@@ -97,18 +102,18 @@ public abstract class Joueur {
     /**
      * Méthode abstraite définissant l'action de jouer un tour.
      */
-    public abstract void jouer();
+    public abstract Paquet.Carte jouer();
 
     /**
      * Méthode définissant l'action à réaliser pour choisir l'atout.
      */
     public abstract Paquet.Carte.Couleur parler(int tour);
 
-    public HashMap<Paquet.Carte.Couleur, ArrayList<Paquet.Carte>> getMain() {
+    public HashMap<Paquet.Carte.Couleur, List<Paquet.Carte>> getMain() {
         return main;
     }
 
-    public void setMain(HashMap<Paquet.Carte.Couleur, ArrayList<Paquet.Carte>> main) {
+    public void setMain(HashMap<Paquet.Carte.Couleur, List<Paquet.Carte>> main) {
         this.main = main;
     }
 }
@@ -127,10 +132,9 @@ class Humain extends Joueur {
      *
      * @param socket La socket utilisée pour la communication réseau.
      */
-    public Humain(Socket socket) {
+    public Humain(Socket socket, BufferedReader in, PrintWriter out) {
         super("Joueur inconnu");
         this.socket = socket;
-        initComm();
     }
 
     /**
@@ -139,22 +143,32 @@ class Humain extends Joueur {
      * @param nom    Le nom du joueur.
      * @param socket La socket utilisée pour la communication réseau.
      */
-    public Humain(String nom, Socket socket) {
+    public Humain(String nom, Socket socket, BufferedReader in, PrintWriter out) {
         super(nom);
         this.socket = socket;
-        initComm();
+        this.in = in;
+        this.out = out;
     }
 
     /**
      * Joue un tour en interagissant avec le client via le réseau.
      */
     @Override
-    public void jouer() {
-        System.out.println("Humain " + getNom() + " joue son tour.");
-        System.out.println("tour jouer: "+waitForClient());
-    }
+    public Paquet.Carte jouer() {
+        // Previens le clients qu'on attend qu'il pose une carte
+        notifier("Playe:$");
+        // Récupère sa réponse sous forme: "TypeDeCouleur"
+        String cartePlaye = waitForClient();
 
-    
+       // Récupère la carte joué
+        Paquet.Carte carte = Paquet.Carte.parseCarte(cartePlaye);
+
+        // L'enlève de la main
+        removeCarte(carte);
+
+        return carte;
+    }
+ 
     /**
      * Joue un tour en interagissant avec le client via le réseau.
      */
@@ -162,41 +176,26 @@ class Humain extends Joueur {
     public Paquet.Carte.Couleur parler(int tour) {
         // Previens le clients qu'on attend qu'il donne un atout
         notifier("GetAtout"+tour+":$");
-        // Récupère sa réponse
+
+        // Récupère sa réponse sous forme d'une des valeurs de l'enum couleur ou 'Passer'
         String atout = waitForClient();
 
-        // Si le client retourne une chaine vide, il ne prend pas
-        if (atout.isEmpty())
-            return null;
-        
-        // Sinon il prend
+        if (atout.equals("Passer")) return null;    // Si le joueur ne prend pas
+
         try {   // Récupère la couleur
-            Paquet.Carte.Couleur res = Paquet.Carte.Couleur.valueOf(atout);
+            Paquet.Carte.Couleur res = Paquet.Carte.Couleur.valueOf(atout.toUpperCase());
             res.setIsAtout(true);   // Défini que l'atout est cette couleur
             return res;
-            
+
         } catch (Exception e) {
             e.printStackTrace();
         }
         return null;
     }
 
-    /**
-     * Initialise la communication avec le client en établissant les flux d'entrée et de sortie.
-     */
-    private void initComm() {
-        try {
-            // Création du PrintWriter pour envoyer des messages au client
-            out = new PrintWriter(socket.getOutputStream(), true);
-            
-            // Création du BufferedReader pour recevoir les messages du client
-            in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-            
-
-        } catch (IOException e) {
-            e.printStackTrace();
-            System.err.println("Erreur lors de l'initialisation de la communication avec " + getNom());
-        }
+    // Supprime la carte c de la main du joueur
+    private void removeCarte(Carte c) {
+        main.get(c.getCouleur()).remove(c);
     }
 
     public String waitForClient() {
@@ -204,7 +203,6 @@ class Humain extends Joueur {
         try {
             // Lire une ligne du flux d'entrée
             String message = in.readLine();
-
             // Si le message reçu est nul, cela signifie que la connexion a été fermée par le client
             if (message == null) {
                 System.err.println("Le client a fermé la connexion.");
@@ -242,22 +240,15 @@ class Humain extends Joueur {
      */
     public void endConnection() {
         try {
-            if (in != null) {
-                in.close();
-            }
-            if (out != null) {
-                out.close();
-            }
-            if (socket != null) {
-                socket.close();
-            }
-            System.out.println("Connexion fermée pour " + getNom());
+            if (in != null) in.close();
+            if (out != null) out.close();
+            if (socket != null) socket.close();
+
         } catch (IOException e) {
             e.printStackTrace();
             System.err.println("Erreur lors de la fermeture de la connexion pour " + getNom());
         }
     }
-
 
     /**
      * Retourne la socket associée au joueur humain.
@@ -305,8 +296,9 @@ class BotDebutant extends Joueur {
     }
 
     @Override
-    public void jouer() {
+    public Paquet.Carte jouer() {
         System.out.println(getNom() + " (Débutant) joue.");
+        return null;
     }
 
     @Override
@@ -325,8 +317,9 @@ class BotMoyen extends Joueur {
     }
 
     @Override
-    public void jouer() {
+    public Paquet.Carte jouer() {
         System.out.println(getNom() + " (Intermédiaire) joue.");
+        return null;
     }
 
     @Override
@@ -345,8 +338,9 @@ class BotExpert extends Joueur {
     }
 
     @Override
-    public void jouer() {
+    public Paquet.Carte jouer() {
         System.out.println(getNom() + " (Expert) joue.");
+        return null;
     }
 
     @Override

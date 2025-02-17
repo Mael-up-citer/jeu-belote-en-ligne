@@ -1,6 +1,13 @@
 package src.main;
 
+
+import src.main.Paquet.Carte.*;
+
 import java.util.Arrays;
+import java.util.List;
+import java.util.ArrayList;
+import java.util.HashMap;
+
 
 /**
  * Classe représentant une partie de jeu.
@@ -15,7 +22,8 @@ public class Game implements Runnable {
     private final Paquet paquet; // Le paquet de cartes
 
     private int premierJoueur; // Index du joueur qui commence le tour
-    private int nextCarte;   // Index de la prochaine carte du paquet
+    private HashMap<Couleur, List<Paquet.Carte>> cartePlay = new HashMap<>();
+
 
     /**
      * Constructeur de la classe Game.
@@ -38,10 +46,14 @@ public class Game implements Runnable {
 
         this.paquet = new Paquet();
         premierJoueur = 0;
-        nextCarte = 0;
 
+        // Attends le chargement des UI Clients
         try{Thread.sleep(100);} catch(InterruptedException e) {}
         majAllClients("GameStart:$");
+
+        // Init la map
+        for(Couleur c : Couleur.values())
+            cartePlay.put(c, new ArrayList<>());
     }
 
     /**
@@ -66,15 +78,13 @@ public class Game implements Runnable {
 
         for (Joueur joueur : joueurs)
             joueur.sortCard();
-  
 
         // Previens tout les humains en leur envoyant leur main
         for (Joueur joueur : joueurs) {
             if (joueur instanceof Humain) {
-                System.out.println(joueur.getMain().toString());
                 // Envoie au client sa main
                 ((Humain) joueur).notifier("SetMain:"+joueur.getMain().toString());
-                // ENvoie au client la carte du milieu
+                // Envoie au client la carte du milieu
                 ((Humain) joueur).notifier("SetMiddleCard:"+getFirstCard());
             }
         }
@@ -89,7 +99,8 @@ public class Game implements Runnable {
         // 2. Jouer
         while (taillePli-- > 0) {
             for (int i = premierJoueur; i < premierJoueur+NB_PLAYERS; i++) {
-                joueurs[i%NB_PLAYERS].jouer();
+                Paquet.Carte carteJouee = joueurs[i%NB_PLAYERS].jouer();
+                cartePlay.get(carteJouee.getCouleur()).add(carteJouee);
             }
         }
     }
@@ -102,24 +113,28 @@ public class Game implements Runnable {
         for (int i = premierJoueur; i < premierJoueur+NB_PLAYERS; i++) {
             atout = joueurs[i].parler(1);
             // Dès qu'un joueur prend on quitte la boucle
-            if (atout != null)
-                break;
+            if (atout != null) {
+                // Previens tout le monde que l'atout est définie
+                majAllClients("AtoutIsSet:"+atout);
+                return atout;
+            }
         }
 
-        if (atout == null) {
-            // 2. tour 2
-            for (int i = premierJoueur; i < premierJoueur+NB_PLAYERS; i++) {
-                atout = joueurs[i].parler(2);
-                // Dès qu'un joueur prend on quitte la boucle
-                if (atout != null)
-                    break;
+        // 2. tour 2
+        for (int i = premierJoueur; i < premierJoueur+NB_PLAYERS; i++) {
+            atout = joueurs[i].parler(2);
+            // Dès qu'un joueur prend on quitte la boucle
+            if (atout != null) {
+                // Previens tout le monde que l'atout est définie
+                majAllClients("atoutIsSet:"+atout);
+                return atout;
             }
-     
-            if (atout == null)
-                // 3. Personne ne prends
-                resetParty();
         }
-        return atout;
+
+        // 3. Personne ne prends
+        resetParty();   // Recommence la partie
+
+        return null;
     }
 
     /**
@@ -132,30 +147,34 @@ public class Game implements Runnable {
         for (Joueur joueur : joueurs) {
             // Donne n cartes à un joueur
             for (int i = 0; i < n; i++) {
-                if (nextCarte < paquet.size()) {
-                    Paquet.Carte carte = paquet.get(nextCarte++);
-                    joueur.addCard(carte);
-                }
-                else
-                    throw new IndexOutOfBoundsException("Erreur: carte "+nextCarte+"/"+paquet.size()+" inexistente");
+                Paquet.Carte carte = paquet.getNext();
+                joueur.addCard(carte);
             }
         }
     }
 
     // Retourne la carte qui sera placé au centre pour choisir l'atout
     private String getFirstCard() {
-        return paquet.get(nextCarte).toString();
+        return paquet.getNext().toString();
     }
 
     private void resetParty() {
         // 1. Reset toutes les mains
         for (Joueur joueur : joueurs)
-                joueur.setMain(null);
+                joueur.clearMain();
 
         // 2. Previens les humains
         for (Joueur joueur : joueurs)
             if (joueur instanceof Humain)
                 ((Humain) joueur).notifier("SetMain:null");
+
+        // 3. Coupe le paquet et remet l'index à 0
+        paquet.coupe();
+        paquet.RAZCurrentAcessIndex();
+
+        // 4. Vider toutes les listes de cartes jouées mais garder les couleurs
+        for (List<Paquet.Carte> cartes : cartePlay.values())
+            cartes.clear();
     }
 
     /**

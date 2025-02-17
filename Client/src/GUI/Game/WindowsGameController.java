@@ -114,12 +114,16 @@ public class WindowsGameController extends Gui {
     // Stocke le fond sombre quand le jeu attend les joueurs
     private Pane dimmingPane;
 
-    // Le contrôleur a un ID de jeu
+    // Le contrôleur a l'ID de jeu
     private static String idGame;
-    final String prefix = "/images/cartes/";
-    final String suffix = ".png";
+    // Débutet fin du chemin des images des cartes
+    private final String prefix = "/images/cartes/";
+    private final String suffix = ".png";
 
-    private ArrayList<ImageView> deck = new ArrayList<>();  // Liste des images correspondant à la main du joueur
+    // Nom de la carte du milieu durant le choix de l'atout
+    private String nameMiddleCarte;
+
+    private HashMap<String, ImageView> deck = new HashMap<>();  // Liste des images correspondant à la main du joueur
 
     // Table de dispatching pour associer les commandes à leurs méthodes
     private final Map<String, Consumer<String>> COMMANDMAP = new HashMap<>();
@@ -147,6 +151,7 @@ public class WindowsGameController extends Gui {
         Pique.setOnAction(e -> handleButtonClick(Pique));
         Carreau.setOnAction(e -> handleButtonClick(Carreau));
         Trefle.setOnAction(e -> handleButtonClick(Trefle));
+        Passer.setOnAction(e -> handleButtonClick(Passer));
 
         // Définir un message sur le nombre de joueurs
         idGameLabel.setText("id de la partie: " + idGame);
@@ -173,8 +178,8 @@ public class WindowsGameController extends Gui {
         // Récupére l'ID du bouton cliqué et publie l'évènement
         EventManager.getInstance().publish(NAMEPUBLISH, "AtoutChoisi:"+button.getId());
 
-        // TODO Désactive les buttons Après un clique
-        toogleAtoutButton();
+        // Désactive les buttons Après un clique
+        handleAtoutButton(true);
     }
 
     /**
@@ -208,6 +213,7 @@ public class WindowsGameController extends Gui {
         COMMANDMAP.put("GetAtout1", unused -> askAtout1());
         COMMANDMAP.put("GetAtout2", unused -> askAtout2());
         COMMANDMAP.put("AtoutIsSet", unused -> atoutIsSet());
+        COMMANDMAP.put("ClearHand", unused -> ClearHand());
     }
 
     // Met à jour le label indiquant le nombre de joueur présent / celui attendu
@@ -218,6 +224,7 @@ public class WindowsGameController extends Gui {
     // Affiche les cartes du clients
     private void dispPlayerHand(String hand) {
         String[] cartes = hand.split(";");
+
         for (String name : cartes) {
             // Charge l'image
             Image image = new Image(getClass().getResource(prefix + name + suffix).toExternalForm());
@@ -245,37 +252,53 @@ public class WindowsGameController extends Gui {
                 scale.setY(1);  // Taille initiale sur l'axe Y
             });
 
-            deck.add(imageView);
+            deck.put(name, imageView);
         }
-        CadrePlayer1.getChildren().addAll(deck);
+        CadrePlayer1.getChildren().addAll(deck.values());
     }
 
     // Affiche la carte du milieu
     private void dispMiddleCard(String carte) {
+        nameMiddleCarte = carte;    // Garde en mémoir le nom de la carte
         CardDumpImg1.setImage(new Image(getClass().getResource(prefix + carte + suffix).toExternalForm()));
     }
 
     // Active tout les buttons atouts
     private void askAtout1() {
-        // Active le button de la couleur de la carte du milieu
-        // 1. Récupere la couleur de la carte du milieu
-        // 2. Active sont button
-        // button.setDisable(false);
+        // Récupère la couleur de la carte et active le boutton associé
+        switch (nameMiddleCarte.split("De")[1]) {
+            case "COEUR":
+            Coeur.setDisable(false);
+                break;
+            case "PIQUE":
+                Pique.setDisable(false);
+                break;
+            case "TREFLE":
+                Trefle.setDisable(false);
+                break;
+            case "CARREAU":
+                Carreau.setDisable(false);
+                break;
+        
+            default:
+                break;
+        }
+        Passer.setDisable(false);   // Active le button passer
     }
 
     // Active tout les buttons atouts
     private void askAtout2() {
         // Active tous les buttons du choix de l'atout
-        toogleAtoutButton();
+        handleAtoutButton(false);
     }
 
     // Inverse l'etat d'activation des buttons du choix de l'atout
-    private void toogleAtoutButton() {
-        Coeur.setDisable(!Coeur.isDisable());
-        Pique.setDisable(!Pique.isDisable());
-        Carreau.setDisable(!Carreau.isDisable());
-        Trefle.setDisable(!Trefle.isDisable());
-        Passer.setDisable(!Passer.isDisable());
+    private void handleAtoutButton(Boolean state) {
+        Coeur.setDisable(state);
+        Pique.setDisable(state);
+        Carreau.setDisable(state);
+        Trefle.setDisable(state);
+        Passer.setDisable(state);
     }
 
     // Quand l'atout est set on désactive la pane du choix de l'atout
@@ -286,6 +309,21 @@ public class WindowsGameController extends Gui {
         // 2. Marque qui à pris
 
         // 3. Set le label atout
+    }
+
+    // Si personne ne prend on désafiche toutes les cartes
+    private void ClearHand() {
+        nameMiddleCarte = null;
+
+        // 1. Enlève la carte du milieu
+        CardDumpImg1.setImage(null);
+
+        // 2. Enlève la main du joueur
+        for (ImageView iv : deck.values())
+            iv.setImage(null);
+
+        CadrePlayer1.getChildren().clear();
+        deck.clear();
     }
 
     public static void setIdGame(String idG) {

@@ -1,6 +1,6 @@
 package src.main;
 
-public class Paire <T, P> {
+class Paire <T, P> {
     private T first;
    private P second;
 

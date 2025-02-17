@@ -1,8 +1,12 @@
 package src.main;
 
 import java.util.Random;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.ArrayList;
-import java.io.Serializable;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.List;
 
 /**
  * La classe Paquet représente un paquet de 32 cartes de jeu.
@@ -10,13 +14,12 @@ import java.io.Serializable;
  * mélanger les cartes, et ajouter des plis.
  * La classe Paquet hérite de ArrayList et contient une classe interne Carte.
  */
-public class Paquet extends ArrayList<Paquet.Carte> {
+public class Paquet {
     /**
      * La classe Carte représente une carte de jeu avec une couleur et un type (valeur).
      * Elle est comparable en fonction de sa valeur, et elle est sérialisable pour la transmission réseau.
      */
-    public static class Carte implements Comparable<Carte>, Serializable {
-        private static final long serialVersionUID = 1L;
+    public static class Carte implements Comparable<Carte> {
 
         /**
          * Enumération représentant les couleurs possibles des cartes.
@@ -78,6 +81,31 @@ public class Paquet extends ArrayList<Paquet.Carte> {
         }
 
         /**
+         * Utilise une regex pour récupérer la Couleur et le Type dans la chaîne
+         * et retourne un objet carte correspondant.
+         * 
+         * @param str La chaîne de caractères représentant une carte.
+         * @return L'objet carte correspondant, ou null si la chaîne ne correspond pas.
+         */
+        public static Paquet.Carte parseCarte(String str) {
+            str = str.toUpperCase();    // Normalise la chaîne
+            String regex = "\\b(COEUR|CARREAU|PIQUE|TREFLE)\\b.*?\\b(AS|SEPT|HUIT|NEUF|DIX|VALLET|DAMME|ROI)\\b";
+            Pattern pattern = Pattern.compile(regex);
+            Matcher matcher = pattern.matcher(str);
+
+            if (matcher.find()) {
+                try {   
+                    Paquet.Carte.Couleur couleur = Paquet.Carte.Couleur.valueOf(matcher.group(1));
+                    Paquet.Carte.Type type = Paquet.Carte.Type.valueOf(matcher.group(2));
+                    return new Carte(couleur, type);
+                } catch (Exception e) {
+                    return null;
+                }
+            }
+            return null;
+        }
+
+        /**
          * Compare deux cartes en fonction de leur valeur en points.
          * 
          * @param c La carte à comparer.
@@ -85,6 +113,14 @@ public class Paquet extends ArrayList<Paquet.Carte> {
          */
         @Override
         public int compareTo(Carte c) {
+            // Si this est un atout et pas c, this est forcement supérieur
+            if (this.getCouleur().getIsAtout() && !c.getCouleur().getIsAtout())
+                return 1;
+            // Même logique sauf qu'ici c est atout
+            else if (!this.getCouleur().getIsAtout() && c.getCouleur().getIsAtout())
+                return 0;
+
+            // Si les 2 cartes sont atout ou aucune d'elles ne l'est, on compare leur nb de points
             return this.getNbPoint() - c.getNbPoint();
         }
 
@@ -131,6 +167,8 @@ public class Paquet extends ArrayList<Paquet.Carte> {
     }
 
     private int currentAcessIndex = 0;  // Indicateur pour savoir quelle carte doit être sélectionnée
+    private List<Carte> cartes = new ArrayList<Paquet.Carte>(); // Liste de toutes les cartes
+
 
     /**
      * Constructeur qui crée un paquet de cartes en générant toutes les combinaisons possibles de couleurs et de types,
@@ -146,11 +184,10 @@ public class Paquet extends ArrayList<Paquet.Carte> {
      */
     public void createPaquet() {
         // Crée toutes les combinaisons de couleurs et de types
-        for (int i = 0; i < Carte.Couleur.values().length; i++) {
-            for (int j = 0; j < Carte.Type.values().length; j++) {
-                this.add(new Carte(Carte.Couleur.values()[i], Carte.Type.values()[j]));
-            }
-        }
+        for (int i = 0; i < Carte.Couleur.values().length; i++)
+            for (int j = 0; j < Carte.Type.values().length; j++)
+                cartes.add(new Carte(Carte.Couleur.values()[i], Carte.Type.values()[j]));
+
         shufle();  // Mélange les cartes
     }
 
@@ -161,18 +198,48 @@ public class Paquet extends ArrayList<Paquet.Carte> {
         Random ran = new Random();
         int indx1, indx2;
 
-        // Mélange les cartes n^3 fois (approximativement)
-        for (int i = 0; i < this.size() * this.size() * this.size(); i++) {
+        // Mélange les cartes n^3 fois
+        for (int i = 0; i < cartes.size() * cartes.size() * cartes.size(); i++) {
             do {
-                indx1 = ran.nextInt(this.size());
-                indx2 = ran.nextInt(this.size());
+                indx1 = ran.nextInt(cartes.size());
+                indx2 = ran.nextInt(cartes.size());
             } while (indx1 == indx2);  // Assure que les index ne sont pas identiques
 
             // Échange les cartes
-            Paquet.Carte tmp = this.get(indx1);
-            this.set(indx1, this.get(indx2));
-            this.set(indx2, tmp);
+            Paquet.Carte tmp = cartes.get(indx1);
+            cartes.set(indx1, cartes.get(indx2));
+            cartes.set(indx2, tmp);
         }
+    }
+
+    /**
+     * Coupe le paquet en simulant une coupe de belote.  
+     * L'index de coupe est choisi selon une loi normale centrée sur la moitié du paquet avec un écart-type de 8.  
+     * Réorganise les cartes en effectuant une rotation.
+     */
+    public void coupe() {
+        if (cartes.isEmpty()) return; // Vérifie si le paquet est vide
+
+        int taille = cartes.size();
+        Random rand = new Random();
+
+        // Génère un index de coupe avec une distribution normale (moyenne = taille/2, écart-type = 8)
+        int indexCoupe;
+        do {
+            indexCoupe = (int) Math.round(rand.nextGaussian() * 8 + taille / 2);
+        } while (indexCoupe < 1 || indexCoupe >= taille); // S'assure que l'index est valide
+
+        // Applique la coupe en décalant les cartes
+        Collections.rotate(cartes, taille - indexCoupe);
+    }
+
+    /**
+     * Retourne la carte suivante à partir de l'indice courant.
+     * 
+     * @return La carte suivante dans le paquet.
+     */
+    public Paquet.Carte getNext() {
+        return cartes.get(currentAcessIndex++);
     }
 
     /**
@@ -183,22 +250,17 @@ public class Paquet extends ArrayList<Paquet.Carte> {
      */
     public void addPlis(Plis plis) {
         for (int i = 0; i < plis.getPlis().length; i++)
-            this.add(plis.getPlis()[i]);
+            cartes.add(plis.getPlis()[i]);
 
         plis = null;  // Supprime le plis une fois qu'il a été ajouté
     }
 
-    // Accesseurs pour l'indicateur de sélection de la carte
-    public int getCurrentAcessIndex() {
-        return currentAcessIndex;
-    }
-
-    public void setCurrentAcessIndex(int currentAcessIndex) {
-        this.currentAcessIndex = currentAcessIndex;
-    }
-
+    /**
+     * Réinitialise l'indice d'accès à -1, ce qui permet de recommencer à parcourir
+     * le paquet de cartes depuis le début.
+     */
     public void RAZCurrentAcessIndex() {
-        currentAcessIndex = 0;
+        currentAcessIndex = -1;
     }
 
     /**
@@ -210,9 +272,13 @@ public class Paquet extends ArrayList<Paquet.Carte> {
     @Override
     public String toString() {
         StringBuilder sb = new StringBuilder();
-        for (Carte carte : this)
+        for (Carte carte : cartes)
             sb.append(carte.toString()).append("\n");  // Ajoute chaque carte au StringBuilder
 
         return sb.toString();  // Retourne la liste complète des cartes
+    }
+
+    public List<Carte> getCartes() {
+        return cartes;
     }
 }
