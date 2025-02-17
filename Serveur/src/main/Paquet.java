@@ -256,11 +256,11 @@ public class Paquet {
     }
 
     /**
-     * Réinitialise l'indice d'accès à -1, ce qui permet de recommencer à parcourir
+     * Réinitialise l'indice d'accès à 0, ce qui permet de recommencer à parcourir
      * le paquet de cartes depuis le début.
      */
     public void RAZCurrentAcessIndex() {
-        currentAcessIndex = -1;
+        currentAcessIndex = 0;
     }
 
     /**
