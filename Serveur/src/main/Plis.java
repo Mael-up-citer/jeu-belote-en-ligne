@@ -53,4 +53,8 @@ public class Plis {
     public Joueur getMaitre() {
         return maitre;
     }
+
+    public Equipe getEquipe() {
+        return maitre.getEquipe();
+    }
 }

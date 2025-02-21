@@ -102,7 +102,7 @@ public abstract class Joueur {
     /**
      * Méthode abstraite définissant l'action de jouer un tour.
      */
-    public abstract Paquet.Carte jouer();
+    public abstract Paquet.Carte jouer(Plis plis);
 
     /**
      * Méthode définissant l'action à réaliser pour choisir l'atout.
@@ -149,25 +149,6 @@ class Humain extends Joueur {
         this.in = in;
         this.out = out;
     }
-
-    /**
-     * Joue un tour en interagissant avec le client via le réseau.
-     */
-    @Override
-    public Paquet.Carte jouer() {
-        // Previens le clients qu'on attend qu'il pose une carte
-        notifier("Playe:$");
-        // Récupère sa réponse sous forme: "TypeDeCouleur"
-        String cartePlaye = waitForClient();
-
-       // Récupère la carte joué
-        Paquet.Carte carte = Paquet.Carte.parseCarte(cartePlaye);
-
-        // L'enlève de la main
-        removeCarte(carte);
-
-        return carte;
-    }
  
     /**
      * Joue un tour en interagissant avec le client via le réseau.
@@ -193,8 +174,33 @@ class Humain extends Joueur {
         return null;
     }
 
+    /**
+     * Joue un tour en interagissant avec le client via le réseau.
+     */
+    @Override
+    public Paquet.Carte jouer(Plis plis) {
+        // Previens le clients qu'on attend qu'il pose une carte
+        notifier("Play:"+Rules.playable(plis, this));
+
+        // Récupère sa réponse sous forme: "TypeDeCouleur"
+        String cartePlaye = waitForClient();
+
+       // Récupère la carte joué
+        Paquet.Carte carte = Paquet.Carte.parseCarte(cartePlaye);
+
+        System.out.println("Le joueur "+nom+"  a joué la carte "+carte);
+
+        // L'enlève de la main
+        removeCarte(carte);
+
+        return carte;
+    }
+
     // Supprime la carte c de la main du joueur
-    private void removeCarte(Carte c) {
+    private void removeCarte(Carte c) throws IllegalArgumentException {
+        if (main.get(c.getCouleur()) == null)
+            throw new IllegalArgumentException("Aucun carte de cette couleur n'hésiste");
+
         main.get(c.getCouleur()).remove(c);
     }
 
@@ -296,15 +302,15 @@ class BotDebutant extends Joueur {
     }
 
     @Override
-    public Paquet.Carte jouer() {
-        System.out.println(getNom() + " (Débutant) joue.");
+    public Paquet.Carte.Couleur parler(int tour) {
+        System.out.println(getNom() + " (Expert) parle.");
         return null;
     }
 
     @Override
-    public Paquet.Carte.Couleur parler(int tour) {
-        System.out.println(getNom() + " (Expert) parle.");
-        return null;
+    public Paquet.Carte jouer(Plis plis) {
+        System.out.println(getNom() + " (Débutant) joue.");
+        return Rules.playable(plis, this).get(0);
     }
 }
 
@@ -317,9 +323,9 @@ class BotMoyen extends Joueur {
     }
 
     @Override
-    public Paquet.Carte jouer() {
+    public Paquet.Carte jouer(Plis plis) {
         System.out.println(getNom() + " (Intermédiaire) joue.");
-        return null;
+        return Rules.playable(plis, this).get(0);
     }
 
     @Override
@@ -338,9 +344,9 @@ class BotExpert extends Joueur {
     }
 
     @Override
-    public Paquet.Carte jouer() {
+    public Paquet.Carte jouer(Plis plis) {
         System.out.println(getNom() + " (Expert) joue.");
-        return null;
+        return Rules.playable(plis, this).get(0);
     }
 
     @Override

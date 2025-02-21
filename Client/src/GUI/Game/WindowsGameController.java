@@ -123,7 +123,7 @@ public class WindowsGameController extends Gui {
     // Nom de la carte du milieu durant le choix de l'atout
     private String nameMiddleCarte;
 
-    private HashMap<String, ImageView> deck = new HashMap<>();  // Liste des images correspondant à la main du joueur
+    private HashMap<String, MyImageView> deck = new HashMap<>();  // Map(nom-> image) des images correspondant à la main du joueur
 
     // Table de dispatching pour associer les commandes à leurs méthodes
     private final Map<String, Consumer<String>> COMMANDMAP = new HashMap<>();
@@ -214,6 +214,7 @@ public class WindowsGameController extends Gui {
         COMMANDMAP.put("GetAtout2", unused -> askAtout2());
         COMMANDMAP.put("AtoutIsSet", unused -> atoutIsSet());
         COMMANDMAP.put("ClearHand", unused -> ClearHand());
+        COMMANDMAP.put("Play", this::play);
     }
 
     // Met à jour le label indiquant le nombre de joueur présent / celui attendu
@@ -222,38 +223,19 @@ public class WindowsGameController extends Gui {
     }
 
     // Affiche les cartes du clients
+    // Affiche les cartes du client
     private void dispPlayerHand(String hand) {
         String[] cartes = hand.split(";");
 
         for (String name : cartes) {
-            // Charge l'image
-            Image image = new Image(getClass().getResource(prefix + name + suffix).toExternalForm());
-            // Créer un ImageView pour afficher l'image
-            ImageView imageView = new ImageView(image);
+            // Créer une instance de MyImageView
+            MyImageView imageView = new MyImageView(name, prefix + name + suffix);
 
-            // Ajuste la taille de l'image
-            imageView.setFitWidth(60);
-            imageView.setFitHeight(125);
-            imageView.setPreserveRatio(true);
-
-            // Créer un objet Scale qui permettra de grossir l'image
-            Scale scale = new Scale(1, 1);  // Échelle initiale (taille normale)
-            imageView.getTransforms().add(scale);  // Ajouter la transformation à l'ImageView
-
-            // Ajouter l'effet de grossissement au survol de la souris
-            imageView.setOnMouseEntered(event -> {
-                scale.setX(1.3);  // Augmenter la taille sur l'axe X (largeur)
-                scale.setY(1.3);  // Augmenter la taille sur l'axe Y (hauteur)
-            });
-
-            // Réduire la taille de l'image quand la souris quitte la carte
-            imageView.setOnMouseExited(event -> {
-                scale.setX(1);  // Taille initiale sur l'axe X
-                scale.setY(1);  // Taille initiale sur l'axe Y
-            });
-
+            // Ajouter la carte à la collection
             deck.put(name, imageView);
         }
+
+        // Ajouter toutes les cartes affichées au cadre du joueur
         CadrePlayer1.getChildren().addAll(deck.values());
     }
 
@@ -309,6 +291,7 @@ public class WindowsGameController extends Gui {
         // 2. Marque qui à pris
 
         // 3. Set le label atout
+
     }
 
     // Si personne ne prend on désafiche toutes les cartes
@@ -325,6 +308,18 @@ public class WindowsGameController extends Gui {
         CadrePlayer1.getChildren().clear();
         deck.clear();
     }
+
+    private void play(String card) {
+        // 1. Rendre cliquable les cartes jouables
+        card = card.substring(1, card.length()-1);
+    
+        String[] str = card.split(", ");
+    
+        // Pour chaque carte jouable
+        for(String carte : str)
+            if (deck.containsKey(carte))
+                deck.get(carte).activate(); // Active la carte avec la nouvelle méthode
+    }    
 
     public static void setIdGame(String idG) {
         idGame = idG;

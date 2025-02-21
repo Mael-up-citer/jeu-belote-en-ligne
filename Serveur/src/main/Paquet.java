@@ -87,23 +87,28 @@ public class Paquet {
          * @param str La chaîne de caractères représentant une carte.
          * @return L'objet carte correspondant, ou null si la chaîne ne correspond pas.
          */
-        public static Paquet.Carte parseCarte(String str) {
-            str = str.toUpperCase();    // Normalise la chaîne
-            String regex = "\\b(COEUR|CARREAU|PIQUE|TREFLE)\\b.*?\\b(AS|SEPT|HUIT|NEUF|DIX|VALLET|DAMME|ROI)\\b";
+        public static Carte parseCarte(String cardName) {
+            cardName = cardName.toUpperCase(); // Normalise la chaîne
+            // Expression régulière adaptée au format "TYPEDeCOULEUR"
+            String regex = "\\b(AS|SEPT|HUIT|NEUF|DIX|VALET|DAMME|ROI)DE(COEUR|CARREAU|PIQUE|TREFLE)\\b";
             Pattern pattern = Pattern.compile(regex);
-            Matcher matcher = pattern.matcher(str);
-
+            Matcher matcher = pattern.matcher(cardName);
+        
             if (matcher.find()) {
-                try {   
-                    Paquet.Carte.Couleur couleur = Paquet.Carte.Couleur.valueOf(matcher.group(1));
-                    Paquet.Carte.Type type = Paquet.Carte.Type.valueOf(matcher.group(2));
+                try {
+                    System.out.println("type = "+matcher.group(1));
+                    System.out.println("col = "+matcher.group(2));
+
+                    Paquet.Carte.Type type = Paquet.Carte.Type.valueOf(matcher.group(1));
+                    Paquet.Carte.Couleur couleur = Paquet.Carte.Couleur.valueOf(matcher.group(2));
                     return new Carte(couleur, type);
-                } catch (Exception e) {
-                    return null;
+                } catch (IllegalArgumentException e) {
+                    return null; // Retourne null si la carte ne correspond pas
                 }
             }
-            return null;
+            return null; // Retourne null si le format ne correspond pas
         }
+        
 
         /**
          * Compare deux cartes en fonction de leur valeur en points.
@@ -243,17 +248,31 @@ public class Paquet {
     }
 
     /**
-     * Ajoute un plis (ensemble de cartes) au paquet.
+     * Reconstruit le paquet avec les plis
      * Les cartes du plis sont ajoutées à la fin du paquet.
      * 
-     * @param plis Le plis à ajouter.
+     * @param plis tableau de tout les plis joué
      */
-    public void addPlis(Plis plis) {
-        for (int i = 0; i < plis.getPlis().length; i++)
-            cartes.add(plis.getPlis()[i]);
+    public void addPlis(Plis[] plis, Equipe[] equipe) {
+        cartes.clear(); // Vide les anciennes cartes
+    
+        // Liste temporaire pour stocker les cartes de l'équipe 1
+        List<Carte> cartesEquipe1 = new ArrayList<>();
+    
+        // Parcourir les plis et séparer les cartes des deux équipes
+        for (int i = 0; i < plis.length; i++) {
+            if (plis[i].getEquipe().equals(equipe[0])) // Si le pli appartient à l'équipe 1
+                for (int j = 0; j < plis[i].getPlis().length; j++)
+                    cartesEquipe1.add(plis[i].getPlis()[j]);
 
-        plis = null;  // Supprime le plis une fois qu'il a été ajouté
+            else if (plis[i].getEquipe().equals(equipe[1])) // Si le pli appartient à l'équipe 2
+                for (int j = 0; j < plis[i].getPlis().length; j++)
+                    cartes.add(plis[i].getPlis()[j]); // Ajoute directement à la fin
+        } 
+        // Ajouter les cartes de l'équipe 1 en tête de la liste
+        cartes.addAll(0, cartesEquipe1);
     }
+    
 
     /**
      * Réinitialise l'indice d'accès à 0, ce qui permet de recommencer à parcourir

@@ -21,6 +21,7 @@ public class Game implements Runnable {
     private final Joueur[] joueurs; // Tableau des joueurs (taille fixe : 4)
     private final Paquet paquet; // Le paquet de cartes
 
+    private Plis[] plis;  // Represente les plis du jeu
     private int premierJoueur; // Index du joueur qui commence le tour
     private HashMap<Couleur, List<Paquet.Carte>> cartePlay = new HashMap<>();
 
@@ -47,13 +48,20 @@ public class Game implements Runnable {
         this.paquet = new Paquet();
         premierJoueur = 0;
 
-        // Attends le chargement des UI Clients
-        try{Thread.sleep(100);} catch(InterruptedException e) {}
-        majAllClients("GameStart:$");
-
         // Init la map
         for(Couleur c : Couleur.values())
             cartePlay.put(c, new ArrayList<>());
+
+        int nbPlis = paquet.getCartes().size()/4;   // 4 = taille d'un plis
+        plis = new Plis[nbPlis];
+        
+        // Init le tab avec des plis vide
+        for (int i = 0; i < nbPlis; i++)
+            plis[i] = new Plis();
+
+        // Attends le chargement des UI Clients
+        try{Thread.sleep(100);} catch(InterruptedException e) {}
+        majAllClients("GameStart:$");
     }
 
     /**
@@ -62,8 +70,9 @@ public class Game implements Runnable {
      */
     @Override
     public void run() {
-        while (!partieTerminee())
+        while (!partieTerminee()) {
             huitPlis();
+        }
 
         // Fin de la partie
         endConnection();
@@ -99,10 +108,23 @@ public class Game implements Runnable {
         // 2. Jouer
         while (taillePli-- > 0) {
             for (int i = premierJoueur; i < premierJoueur+NB_PLAYERS; i++) {
-                Paquet.Carte carteJouee = joueurs[i%NB_PLAYERS].jouer();
+                Paquet.Carte carteJouee = joueurs[i%NB_PLAYERS].jouer(plis[plis.length - taillePli]);
+                // Ajoute la carte joué à la map des cartes joué
                 cartePlay.get(carteJouee.getCouleur()).add(carteJouee);
             }
         }
+
+        // 3. Partage les scores avec les UI
+
+        // 4.RAZ les variables de jeu
+        // Reconstruit le paquet avec les plis
+        paquet.addPlis(plis, equipes);
+        // Reset les plis
+        for (int i = 0; i < plis.length; i++)
+            plis[i].reset();
+
+        // 5. RAZ les GUI (la pile de cartes, ...)
+
     }
 
     // Détermine qu'elle sera l'atout du ces 8plis

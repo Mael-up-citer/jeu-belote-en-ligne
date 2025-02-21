@@ -23,7 +23,16 @@ public abstract class Rules {
     public static List<Carte> playable(Plis contexte, Joueur player) {
         List<Carte> res = new ArrayList<>();
         HashMap<Couleur, List<Carte>> playerMain = player.getMain();
+
         Carte asked = contexte.getPlis()[0]; // Première carte jouée du pli
+
+        // Si aucune carte n'a été joué
+        if (asked == null) {    // Joue ce qu'on veut
+            return player.getMain().values()
+                        .stream()
+                        .flatMap(List::stream)
+                        .collect(Collectors.toList());
+        }
 
         // Vérifie si la couleur demandée est un atout
         if (asked.getCouleur().getIsAtout()) {

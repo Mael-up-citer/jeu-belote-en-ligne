@@ -5,9 +5,7 @@ import java.util.function.Consumer;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
 
 
 public class GameManager {
@@ -62,6 +60,7 @@ public class GameManager {
         COMMANDMAPSERVER.put("GetAtout1", unused -> askAtout1());
         COMMANDMAPSERVER.put("GetAtout2", unused -> askAtout2());
         COMMANDMAPSERVER.put("AtoutIsSet", this::atoutIsSet);
+        COMMANDMAPSERVER.put("Play", this::play);
     }
 
     /**
@@ -70,7 +69,7 @@ public class GameManager {
      */
     private void initializeCOMMANDMAPClient() {
         // Commande pour la comunication arrivant de la GUI
-        COMMANDMAPClIENT.put("AtoutChoisi", this::SetAtout);
+        COMMANDMAPClIENT.put("AtoutChoisi", this::setAtout);
         COMMANDMAPClIENT.put("CardPlay", this::onCardPlay);
     }
 
@@ -146,10 +145,16 @@ public class GameManager {
         EventManager.getInstance().publish(NAMEPUBLISH, "AtoutIsSet:$");
     }
 
-    // Vide la main du joueur et previens la gui que la main a changé
+    // Previens la gui que la main a changé
     private void resetPlayerHand() {
         // Envoie un message à la GUI pour désaficher les cartes
         EventManager.getInstance().publish(NAMEPUBLISH, "ClearHand:$");
+    }
+
+    // Demande à la Gui de lui retourner une carte
+    private void play(String possibiliti) {
+        System.out.println("je peux jouer "+possibiliti);
+        EventManager.getInstance().publish(NAMEPUBLISH, "Play:"+possibiliti);
     }
 
 
@@ -158,14 +163,16 @@ public class GameManager {
      * ###############################
      */
 
-    // Tansmet au serveur la carte joué
-    private void onCardPlay(String carte) {
-        ServerConnection.getInstance().sendToServer("UpdateHand:" + carte); // Envoie au serveur sous forme de chaîne
+
+    // Transmet au serveur l'atout choisie
+    private void setAtout(String atout) {
+        ServerConnection.getInstance().sendToServer(atout); // Envoie au serveur sous forme de chaîne
     }
 
     // Transmet au serveur l'atout choisie
-    private void SetAtout(String atout) {
-        ServerConnection.getInstance().sendToServer(atout); // Envoie au serveur sous forme de chaîne
+    private void onCardPlay(String carte) {
+        System.out.println("je viens de jouer "+carte);
+        ServerConnection.getInstance().sendToServer(carte); // Envoie au serveur sous forme de chaîne
     }
 
 
