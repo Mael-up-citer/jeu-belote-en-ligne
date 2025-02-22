@@ -23,6 +23,11 @@ public class Game implements Runnable {
 
     private Plis[] plis;  // Represente les plis du jeu
     private int premierJoueur; // Index du joueur qui commence le tour
+    private int indexDonne; // Index du joueur qui donne
+    private int indexJoueurApris;   // Index du joueur qui  à pris dans le tableau joueurs
+    private Paquet.Carte middleCard;  // Carte du milieu qui dirige l'atout
+
+    // Contient toutes les cartes joué durant la partie
     private HashMap<Couleur, List<Paquet.Carte>> cartePlay = new HashMap<>();
 
 
@@ -37,27 +42,24 @@ public class Game implements Runnable {
         this.gameId = id;
         this.equipes = new Equipe[] { equipe1, equipe2 };
 
-        // Créer un tableau fixe de joueurs
         this.joueurs = new Joueur[] { 
             equipe1.getJ1(), 
+            equipe2.getJ1(),
             equipe1.getJ2(), 
-            equipe2.getJ1(), 
             equipe2.getJ2() 
         };
 
         this.paquet = new Paquet();
-        premierJoueur = 0;
+        premierJoueur = 1;
+        indexDonne = 0;
 
         // Init la map
-        for(Couleur c : Couleur.values())
-            cartePlay.put(c, new ArrayList<>());
+        for(Couleur c : Couleur.values()) cartePlay.put(c, new ArrayList<>());
 
-        int nbPlis = paquet.getCartes().size()/4;   // 4 = taille d'un plis
+        int nbPlis = paquet.getCartes().size() / NB_PLAYERS;
         plis = new Plis[nbPlis];
-        
         // Init le tab avec des plis vide
-        for (int i = 0; i < nbPlis; i++)
-            plis[i] = new Plis();
+        for (int i = 0; i < nbPlis; i++) plis[i] = new Plis();
 
         // Attends le chargement des UI Clients
         try{Thread.sleep(100);} catch(InterruptedException e) {}
@@ -70,48 +72,49 @@ public class Game implements Runnable {
      */
     @Override
     public void run() {
-        while (!partieTerminee()) {
-            huitPlis();
+        try {
+            while (!partieTerminee()) {
+                huitPlis();
+                indexDonne = (indexDonne+1) % joueurs.length; // Après chaque 8 plis on avance dans la donne
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+            endConnection();
         }
-
-        // Fin de la partie
-        endConnection();
     }
 
     private void huitPlis() {
-        int taillePli = 8;    // Chaque joueur va jouer 8 fois pour chaque plis
+        int nbTour = 7;    // Chaque joueur va jouer 8 fois pour chaque plis
 
         // Distribuer les cartes au début de la partie
-        distribuerNCartes(3);
-        distribuerNCartes(2);
+        distribuerNCartes(3, null);
+        distribuerNCartes(2, null);
+        for (Joueur joueur : joueurs) joueur.sortCard();
 
-        for (Joueur joueur : joueurs)
-            joueur.sortCard();
-
-        // Previens tout les humains en leur envoyant leur main
-        for (Joueur joueur : joueurs) {
-            if (joueur instanceof Humain) {
-                // Envoie au client sa main
-                ((Humain) joueur).notifier("SetMain:"+joueur.getMain().toString());
-                // Envoie au client la carte du milieu
-                ((Humain) joueur).notifier("SetMiddleCard:"+getFirstCard());
-            }
-        }
+        transmiteClientHand();
 
         // 1. Définir l'atout
         Paquet.Carte.Couleur atout = chooseAtout();
 
         // Si on ne prend pas d'atout
-        if (atout == null)
-            return; // Quitte et recommence
+        if (atout == null) return; // Quitte et recommence
+
+        // Distribuer les cartes restantes
+        distribuerNCartes(3, joueurs[indexJoueurApris]);
+        for (Joueur joueur : joueurs) joueur.sortCard();
+
+        shareLastCard();
+
 
         // 2. Jouer
-        while (taillePli-- > 0) {
+        while (nbTour >= 0) {
             for (int i = premierJoueur; i < premierJoueur+NB_PLAYERS; i++) {
-                Paquet.Carte carteJouee = joueurs[i%NB_PLAYERS].jouer(plis[plis.length - taillePli]);
+                Paquet.Carte carteJouee = joueurs[i%NB_PLAYERS].jouer(plis[plis.length - nbTour - 1]);
                 // Ajoute la carte joué à la map des cartes joué
                 cartePlay.get(carteJouee.getCouleur()).add(carteJouee);
             }
+            premierJoueur = (premierJoueur +plis[plis.length - nbTour].getWinner()) % joueurs.length;
+            nbTour--;
         }
 
         // 3. Partage les scores avec les UI
@@ -131,27 +134,13 @@ public class Game implements Runnable {
     private Paquet.Carte.Couleur chooseAtout() {
         Paquet.Carte.Couleur atout = null;
 
-        // 1. tour 1
-        for (int i = premierJoueur; i < premierJoueur+NB_PLAYERS; i++) {
-            atout = joueurs[i].parler(1);
-            // Dès qu'un joueur prend on quitte la boucle
-            if (atout != null) {
-                // Previens tout le monde que l'atout est définie
-                majAllClients("AtoutIsSet:"+atout);
-                return atout;
-            }
-        }
+        atout = tourAtout(1);
 
-        // 2. tour 2
-        for (int i = premierJoueur; i < premierJoueur+NB_PLAYERS; i++) {
-            atout = joueurs[i].parler(2);
-            // Dès qu'un joueur prend on quitte la boucle
-            if (atout != null) {
-                // Previens tout le monde que l'atout est définie
-                majAllClients("atoutIsSet:"+atout);
-                return atout;
-            }
-        }
+        if (atout != null) return atout;
+
+        atout = tourAtout(2);
+
+        if (atout != null) return atout;
 
         // 3. Personne ne prends
         resetParty();   // Recommence la partie
@@ -159,25 +148,73 @@ public class Game implements Runnable {
         return null;
     }
 
+    private Paquet.Carte.Couleur tourAtout(int tour) {
+        Paquet.Carte.Couleur atout = null;
+
+        for (int i = indexDonne+1; i <= indexDonne+NB_PLAYERS; i++) {
+            atout = joueurs[i%joueurs.length].parler(tour);
+            // Dès qu'un joueur prend on quitte la boucle
+            if (atout != null) {
+                // Previens tout le monde que l'atout est définie
+                majAllClients("AtoutIsSet:"+atout);
+                indexJoueurApris = i%joueurs.length;
+                return atout;
+            }
+        }
+        return null;
+    }
+
     /**
      * Distribue un certains nombres de cartes à chaque joueur.
      * 
      * @param n Le nombre de cartes à distribuer.
+     * @param exception donne n-1 carte au joueur exception
      */
-    private void distribuerNCartes(int n) {
+    private void distribuerNCartes(int n, Joueur exception) {
+        int nbCarte;
+
         // Pour tout les joueurs
-        for (Joueur joueur : joueurs) {
-            // Donne n cartes à un joueur
-            for (int i = 0; i < n; i++) {
+        for (int i = indexDonne+1; i <= indexDonne+NB_PLAYERS; i++) {
+            if (joueurs[i%joueurs.length].equals(exception)) nbCarte = n-1;
+            else nbCarte = n;
+
+            // Donne nbCarte cartes à un joueur
+            for (int j = 0; j < nbCarte; j++) {
                 Paquet.Carte carte = paquet.getNext();
-                joueur.addCard(carte);
+                joueurs[i%joueurs.length].addCard(carte);
+            }
+        }
+
+        // Donne la carte du milieu au joueur qui a pris
+        if (exception != null) exception.addCard(middleCard);
+    }
+
+    // Donne au clients leurs main et la carte du milieu
+    private void transmiteClientHand() {
+        middleCard = paquet.getNext();
+
+        // Previens tout les humains en leur envoyant leur main
+        for (Joueur joueur : joueurs) {
+            if (joueur instanceof Humain) {
+                // Envoie au client sa main
+                ((Humain) joueur).notifier("SetMain:"+joueur.getMain().toString());
+                // Envoie au client la carte du milieu
+                ((Humain) joueur).notifier("SetMiddleCard:"+middleCard.toString());
             }
         }
     }
 
-    // Retourne la carte qui sera placé au centre pour choisir l'atout
-    private String getFirstCard() {
-        return paquet.getNext().toString();
+    // Donne au clients leurs main et la carte du milieu
+    private void shareLastCard() {
+        // Previens tout les humains en leur envoyant leur main
+        for (Joueur joueur : joueurs) {
+            if (joueur instanceof Humain) {
+                // Envoie au client sa main
+                ((Humain) joueur).notifier("SetMain:null");
+                // Envoie au client la carte du milieu
+                ((Humain) joueur).notifier("SetMain:"+joueur.getMain().toString());
+            }
+        }
     }
 
     private void resetParty() {
@@ -195,8 +232,7 @@ public class Game implements Runnable {
         paquet.RAZCurrentAcessIndex();
 
         // 4. Vider toutes les listes de cartes jouées mais garder les couleurs
-        for (List<Paquet.Carte> cartes : cartePlay.values())
-            cartes.clear();
+        for (List<Paquet.Carte> cartes : cartePlay.values()) cartes.clear();
     }
 
     /**

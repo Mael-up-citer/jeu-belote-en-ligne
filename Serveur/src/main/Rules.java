@@ -3,10 +3,11 @@ package src.main;
 import src.main.Paquet.Carte;
 import src.main.Paquet.Carte.*;
 
+import java.util.stream.Collectors;
+import java.util.List;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
-import java.util.stream.Collectors;
+import java.util.Collections;
 
 /**
  * Classe abstraite implémentant les algorithmes de règles du jeu.
@@ -14,7 +15,7 @@ import java.util.stream.Collectors;
 public abstract class Rules {
 
     /**
-     * Détermine les cartes jouables par un joueur dans un pli donné.
+     * Détermine les cartes jouables par un joueur dans un pli donné en appliquant les règles de la Belote.
      *
      * @param contexte Le pli en cours.
      * @param player   Le joueur dont on vérifie les cartes jouables.
@@ -23,54 +24,60 @@ public abstract class Rules {
     public static List<Carte> playable(Plis contexte, Joueur player) {
         List<Carte> res = new ArrayList<>();
         HashMap<Couleur, List<Carte>> playerMain = player.getMain();
-
-        Carte asked = contexte.getPlis()[0]; // Première carte jouée du pli
-
-        // Si aucune carte n'a été joué
-        if (asked == null) {    // Joue ce qu'on veut
-            return player.getMain().values()
-                        .stream()
-                        .flatMap(List::stream)
-                        .collect(Collectors.toList());
+        Paquet.Carte[] cartesPlis = contexte.getPlis();
+        Carte asked = cartesPlis[0]; // Première carte jouée du pli
+    
+        // Cas où le joueur est le premier à jouer -> il peut jouer ce qu'il veut
+        if (asked == null) {
+            return playerMain.values()
+                    .stream()
+                    .flatMap(List::stream)
+                    .collect(Collectors.toList());
         }
-
+    
+        boolean atoutDéjàPrésent = (contexte.getPowerfullCard() != null) && contexte.getPowerfullCard().getCouleur().getIsAtout();
+    
         // Vérifie si la couleur demandée est un atout
         if (asked.getCouleur().getIsAtout()) {
-            List<Carte> cartes = playerMain.get(asked.getCouleur());
-            if (cartes != null) {
-                // Parcourt les cartes pour trouver celles qui battent la carte demandée
-                int i = cartes.size() - 1;
-                while (i >= 0 && cartes.get(i).compareTo(asked) > 0) {
-                    res.add(cartes.get(i));
-                    i--;
-                }
-                // Si aucune carte ne bat l'atout demandé, renvoie toutes les cartes de la couleur
-                if (res.isEmpty())
-                    return playerMain.get(asked.getCouleur());
-            }
-            else {
-                // Si le joueur n'a pas la couleur demandée, il peut jouer n'importe quelle carte
-                return player.getMain().values()
-                        .stream()
-                        .flatMap(List::stream)
-                        .collect(Collectors.toList());
-            }
-        }
-        else {
-            // Si ce n'est pas un atout, applique les mêmes règles
-            List<Carte> cartes = playerMain.get(asked.getCouleur());
+            List<Carte> cartesAtout = playerMain.get(asked.getCouleur());
+    
+            if (cartesAtout != null && !cartesAtout.isEmpty()) {
+                // Si l'atout est déjà présent dans le pli, il faut monter si possible
+                for (Carte carte : cartesAtout)
+                    if (!atoutDéjàPrésent || carte.compareTo(contexte.getPowerfullCard()) > 0)
+                        res.add(carte);
 
-            if (cartes != null)
-                return playerMain.get(asked.getCouleur());
+                // Si aucune carte ne bat la plus forte, jouer un atout quelconque
+                if (res.isEmpty())
+                    res.addAll(cartesAtout);
+
+            } else {
+                // Pas d'atout -> peut jouer n'importe quoi
+                return playerMain.values()
+                        .stream()
+                        .flatMap(List::stream)
+                        .collect(Collectors.toList());
+            }
+        } else {
+            // Si ce n'est pas un atout, on regarde si on peut suivre la couleur demandée
+            List<Carte> cartesDemandées = playerMain.get(asked.getCouleur());
+    
+            if (cartesDemandées != null && !cartesDemandées.isEmpty())
+                return cartesDemandées;
             else {
-                return player.getMain().values()
+                // Si le joueur n'a pas cette couleur, il peut jouer ce qu'il veut
+                return playerMain.values()
                         .stream()
                         .flatMap(List::stream)
                         .collect(Collectors.toList());
             }
         }
-        return new ArrayList<>(); // Renvoie une liste vide si un problème survient
-    }
+    
+        return res.isEmpty() ? playerMain.values()
+                .stream()
+                .flatMap(List::stream)
+                .collect(Collectors.toList()) : res;
+    }    
 
     /**
      * Retourne toutes les cartes jouables dans un pli en fonction des cartes déjà jouées.
@@ -82,13 +89,17 @@ public abstract class Rules {
      * @return Une liste des cartes encore jouables.
      */
     public static List<Carte> successeur(Plis contexte, HashMap<Couleur, List<Carte>> cartePlay, Paquet paquet) {
-        Carte asked = contexte.getPlis()[0];
-        List<Carte> cartes = cartePlay.get(asked.getCouleur());
+        Carte asked = contexte.getPlis()[0]; // Première carte jouée dans le pli
 
-        if (cartes != null)
-            return cardByColorNotPlayed(asked.getCouleur(), cartePlay, paquet);
-        else
+        // Si aucune carte n'a été jouée, toutes les cartes non jouées sont disponibles
+        if (asked == null) {
             return cardNotPlayed(cartePlay, paquet);
+        }
+
+        // Vérifier si la couleur demandée a encore des cartes non jouées
+        List<Carte> cartesRestantes = cardByColorNotPlayed(asked.getCouleur(), cartePlay, paquet);
+        
+        return !cartesRestantes.isEmpty() ? cartesRestantes : cardNotPlayed(cartePlay, paquet);
     }
 
     /**
@@ -103,9 +114,9 @@ public abstract class Rules {
         List<Carte> allCards = paquet.getCartes().stream()
                 .filter(c -> c.getCouleur() == couleur)
                 .collect(Collectors.toList());
-        
-        List<Carte> playedCards = cartePlay.getOrDefault(couleur, new ArrayList<>());
-        
+
+        List<Carte> playedCards = cartePlay.getOrDefault(couleur, Collections.emptyList());
+
         return allCards.stream()
                 .filter(carte -> !playedCards.contains(carte))
                 .collect(Collectors.toList());
@@ -119,11 +130,11 @@ public abstract class Rules {
      * @return Une liste des cartes non jouées.
      */
     private static List<Carte> cardNotPlayed(HashMap<Couleur, List<Carte>> cartePlay, Paquet paquet) {
-        List<Carte> allCards = paquet.getCartes().stream().collect(Collectors.toList());
+        List<Carte> allCards = new ArrayList<>(paquet.getCartes());
 
-        for (List<Carte> played : cartePlay.values())
-            allCards.removeAll(played);
+        // Supprime toutes les cartes déjà jouées
+        cartePlay.values().forEach(allCards::removeAll);
 
-        return List.copyOf(allCards); // Renvoie une liste immuable
+        return allCards.isEmpty() ? Collections.emptyList() : allCards;
     }
 }

@@ -241,30 +241,13 @@ public class WindowsGameController extends Gui {
 
     // Affiche la carte du milieu
     private void dispMiddleCard(String carte) {
-        nameMiddleCarte = carte;    // Garde en mémoir le nom de la carte
+        nameMiddleCarte = carte.split("De")[1];    // Garde en mémoir le nom de la carte
         CardDumpImg1.setImage(new Image(getClass().getResource(prefix + carte + suffix).toExternalForm()));
     }
 
     // Active tout les buttons atouts
     private void askAtout1() {
-        // Récupère la couleur de la carte et active le boutton associé
-        switch (nameMiddleCarte.split("De")[1]) {
-            case "COEUR":
-            Coeur.setDisable(false);
-                break;
-            case "PIQUE":
-                Pique.setDisable(false);
-                break;
-            case "TREFLE":
-                Trefle.setDisable(false);
-                break;
-            case "CARREAU":
-                Carreau.setDisable(false);
-                break;
-        
-            default:
-                break;
-        }
+        handleOneAtoutButton(nameMiddleCarte, false);
         Passer.setDisable(false);   // Active le button passer
     }
 
@@ -272,6 +255,7 @@ public class WindowsGameController extends Gui {
     private void askAtout2() {
         // Active tous les buttons du choix de l'atout
         handleAtoutButton(false);
+        handleOneAtoutButton(nameMiddleCarte, true);
     }
 
     // Inverse l'etat d'activation des buttons du choix de l'atout
@@ -281,6 +265,27 @@ public class WindowsGameController extends Gui {
         Carreau.setDisable(state);
         Trefle.setDisable(state);
         Passer.setDisable(state);
+    }
+
+    private void handleOneAtoutButton(String name, Boolean state) {
+        // Agit sur le boutton name
+        switch (nameMiddleCarte) {
+            case "COEUR":
+            Coeur.setDisable(state);
+                break;
+            case "PIQUE":
+                Pique.setDisable(state);
+                break;
+            case "TREFLE":
+                Trefle.setDisable(state);
+                break;
+            case "CARREAU":
+                Carreau.setDisable(state);
+                break;
+        
+            default:
+                break;
+        }
     }
 
     // Quand l'atout est set on désactive la pane du choix de l'atout

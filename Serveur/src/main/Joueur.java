@@ -104,17 +104,22 @@ public abstract class Joueur {
      */
     public abstract Paquet.Carte jouer(Plis plis);
 
+    // Supprime la carte c de la main du joueur
+    protected void removeCarte(Carte c) throws IllegalArgumentException {
+        if (c == null || main.get(c.getCouleur()) == null)
+            throw new IllegalArgumentException("Aucun carte de cette couleur n'hésiste "+c);
+
+        main.get(c.getCouleur()).remove(c);
+    }
+
     /**
      * Méthode définissant l'action à réaliser pour choisir l'atout.
      */
     public abstract Paquet.Carte.Couleur parler(int tour);
 
+
     public HashMap<Paquet.Carte.Couleur, List<Paquet.Carte>> getMain() {
         return main;
-    }
-
-    public void setMain(HashMap<Paquet.Carte.Couleur, List<Paquet.Carte>> main) {
-        this.main = main;
     }
 }
 
@@ -155,6 +160,7 @@ class Humain extends Joueur {
      */
     @Override
     public Paquet.Carte.Couleur parler(int tour) {
+        System.out.println("humain parle");
         // Previens le clients qu'on attend qu'il donne un atout
         notifier("GetAtout"+tour+":$");
 
@@ -192,16 +198,10 @@ class Humain extends Joueur {
 
         // L'enlève de la main
         removeCarte(carte);
+        // L'ajoute dans le plis
+        plis.addCard(this, carte);
 
         return carte;
-    }
-
-    // Supprime la carte c de la main du joueur
-    private void removeCarte(Carte c) throws IllegalArgumentException {
-        if (main.get(c.getCouleur()) == null)
-            throw new IllegalArgumentException("Aucun carte de cette couleur n'hésiste");
-
-        main.get(c.getCouleur()).remove(c);
     }
 
     public String waitForClient() {
@@ -309,8 +309,16 @@ class BotDebutant extends Joueur {
 
     @Override
     public Paquet.Carte jouer(Plis plis) {
-        System.out.println(getNom() + " (Débutant) joue.");
-        return Rules.playable(plis, this).get(0);
+        System.out.println("\nVoici mon jeu"+ main);
+        System.out.println("\n"+getNom() + " (Débutant) joue, il a le choix avec "+ Rules.playable(plis, this));
+
+        // L'IA donne une carte
+        Carte carte = Rules.playable(plis, this).get(0);
+
+        // L'ajoute dans le plis
+        plis.addCard(this, carte);
+
+        return carte;
     }
 }
 
@@ -323,15 +331,22 @@ class BotMoyen extends Joueur {
     }
 
     @Override
-    public Paquet.Carte jouer(Plis plis) {
-        System.out.println(getNom() + " (Intermédiaire) joue.");
-        return Rules.playable(plis, this).get(0);
-    }
-
-    @Override
     public Paquet.Carte.Couleur parler(int tour) {
         System.out.println(getNom() + " (Expert) parle.");
         return null;
+    }
+
+    @Override
+    public Paquet.Carte jouer(Plis plis) {
+        System.out.println(getNom() + " (Débutant) joue.");
+
+        // L'IA donne une carte
+        Carte carte = Rules.playable(plis, this).get(0);
+
+        // L'ajoute dans le plis
+        plis.addCard(this, carte);
+
+        return carte;
     }
 }
 
@@ -344,14 +359,21 @@ class BotExpert extends Joueur {
     }
 
     @Override
-    public Paquet.Carte jouer(Plis plis) {
-        System.out.println(getNom() + " (Expert) joue.");
-        return Rules.playable(plis, this).get(0);
-    }
-
-    @Override
     public Paquet.Carte.Couleur parler(int tour) {
         System.out.println(getNom() + " (Expert) parle.");
         return null;
+    }
+
+    @Override
+    public Paquet.Carte jouer(Plis plis) {
+        System.out.println(getNom() + " (Débutant) joue.");
+
+        // L'IA donne une carte
+        Carte carte = Rules.playable(plis, this).get(0);
+
+        // L'ajoute dans le plis
+        plis.addCard(this, carte);
+
+        return carte;
     }
 }

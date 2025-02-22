@@ -52,7 +52,7 @@ public class Paquet {
          * Enumération représentant les types (ou valeurs) des cartes.
          */
         public enum Type {
-            AS(11), SEPT(0), HUIT(0), NEUF(0), DIX(0), VALLET(2), DAMME(3), ROI(4);
+            AS(11), SEPT(0), HUIT(0), NEUF(0), DIX(0), VALET(2), DAMME(3), ROI(4);
 
             private final int value;  // Valeur en points d'une carte
 
@@ -89,20 +89,18 @@ public class Paquet {
          */
         public static Carte parseCarte(String cardName) {
             cardName = cardName.toUpperCase(); // Normalise la chaîne
-            // Expression régulière adaptée au format "TYPEDeCOULEUR"
+            // Expression régulière adaptée au format "TYPEDECOULEUR"
             String regex = "\\b(AS|SEPT|HUIT|NEUF|DIX|VALET|DAMME|ROI)DE(COEUR|CARREAU|PIQUE|TREFLE)\\b";
             Pattern pattern = Pattern.compile(regex);
             Matcher matcher = pattern.matcher(cardName);
         
             if (matcher.find()) {
                 try {
-                    System.out.println("type = "+matcher.group(1));
-                    System.out.println("col = "+matcher.group(2));
-
                     Paquet.Carte.Type type = Paquet.Carte.Type.valueOf(matcher.group(1));
                     Paquet.Carte.Couleur couleur = Paquet.Carte.Couleur.valueOf(matcher.group(2));
                     return new Carte(couleur, type);
                 } catch (IllegalArgumentException e) {
+                    e.printStackTrace();
                     return null; // Retourne null si la carte ne correspond pas
                 }
             }
@@ -137,7 +135,7 @@ public class Paquet {
         public int getNbPoint() {
             if (couleur.isAtout) {
                 switch (type) {
-                    case VALLET:
+                    case VALET:
                         return 20;  // Le valet d'atout vaut 20 points
                     case NEUF:
                         return 14;  // Le neuf d'atout vaut 14 points
@@ -299,5 +297,9 @@ public class Paquet {
 
     public List<Carte> getCartes() {
         return cartes;
+    }
+
+    public int getCurrentAcessIndex() {
+        return currentAcessIndex;
     }
 }
