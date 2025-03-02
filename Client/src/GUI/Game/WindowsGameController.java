@@ -2,6 +2,7 @@ package GUI.Game;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.function.Consumer;
 
@@ -123,7 +124,7 @@ public class WindowsGameController extends Gui {
     // Nom de la carte du milieu durant le choix de l'atout
     private String nameMiddleCarte;
 
-    private HashMap<String, MyImageView> deck = new HashMap<>();  // Map(nom-> image) des images correspondant à la main du joueur
+    Map<String, MyImageView> deck = new LinkedHashMap<>();
 
     // Table de dispatching pour associer les commandes à leurs méthodes
     private final Map<String, Consumer<String>> COMMANDMAP = new HashMap<>();
@@ -223,7 +224,6 @@ public class WindowsGameController extends Gui {
     }
 
     // Affiche les cartes du clients
-    // Affiche les cartes du client
     private void dispPlayerHand(String hand) {
         String[] cartes = hand.split(";");
 

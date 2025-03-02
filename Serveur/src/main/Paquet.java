@@ -52,7 +52,7 @@ public class Paquet {
          * Enumération représentant les types (ou valeurs) des cartes.
          */
         public enum Type {
-            AS(11), SEPT(0), HUIT(0), NEUF(0), DIX(0), VALET(2), DAMME(3), ROI(4);
+            SEPT(0), HUIT(0), NEUF(0), VALET(2), DAMME(3), ROI(4), DIX(10), AS(11),;
 
             private final int value;  // Valeur en points d'une carte
 
@@ -123,7 +123,7 @@ public class Paquet {
             else if (!this.getCouleur().getIsAtout() && c.getCouleur().getIsAtout())
                 return 0;
 
-            // Si les 2 cartes sont atout ou aucune d'elles ne l'est, on compare leur nb de points
+            // Si les 2 cartes sont atout ou aucune d'elles l'est, on compare leur nb de points
             return this.getNbPoint() - c.getNbPoint();
         }
 

@@ -96,7 +96,8 @@ public abstract class Joueur {
      * Trie les cartes de la main du joueur par ordre croissant de valeur.
      */
     public void sortCard() {
-        main.values().forEach(cartes -> Collections.sort(cartes, Comparator.comparingInt(Paquet.Carte::getNbPoint)));
+        main.values().forEach(cartes -> 
+        Collections.sort(cartes, Comparator.comparingInt(carte -> carte.getType().ordinal())));
     }
 
     /**
