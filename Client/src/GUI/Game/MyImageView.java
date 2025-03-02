@@ -4,6 +4,8 @@ import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.transform.Scale;
 import main.EventManager;
+import javafx.scene.layout.Pane;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -11,6 +13,7 @@ import java.util.List;
 public class MyImageView extends ImageView {
     private final String cardName;
     private static final List<MyImageView> activeCards = new ArrayList<>(); // Liste des cartes activées
+    private Pane parentPane;  // Le FlowPane qui contient cette carte
 
 
     public MyImageView(String cardName, String imagePath) {
@@ -45,6 +48,9 @@ public class MyImageView extends ImageView {
                 // Désactiver toutes les cartes activées
                 disableAllActiveCards();
 
+                // Supprime la carte de l'affichage
+                if (parentPane != null) parentPane.getChildren().remove(this);
+
                 // Envoyer l'événement
                 EventManager.getInstance().publish("GameGui:Gui_response", "CardPlay:" + cardName);
             }
@@ -53,9 +59,9 @@ public class MyImageView extends ImageView {
 
     // Désactiver toutes les cartes activées
     private void disableAllActiveCards() {
-        for (MyImageView card : activeCards) {
+        for (MyImageView card : activeCards)
             card.setMouseTransparent(true);
-        }
+
         activeCards.clear(); // Vider la liste après désactivation
     }
 
@@ -63,5 +69,9 @@ public class MyImageView extends ImageView {
     public void activate() {
         this.setMouseTransparent(false);
         activeCards.add(this);
+    }
+
+    public void setParentPane(Pane parent) {
+        parentPane = parent;
     }
 }

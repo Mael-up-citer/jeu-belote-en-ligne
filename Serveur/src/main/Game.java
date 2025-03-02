@@ -110,6 +110,8 @@ public class Game implements Runnable {
         while (nbTour >= 0) {
             for (int i = premierJoueur; i < premierJoueur+NB_PLAYERS; i++) {
                 Paquet.Carte carteJouee = joueurs[i%NB_PLAYERS].jouer(plis[plis.length - nbTour - 1]);
+                // Met à jour l'affichage du millieu
+                majAllClients("AddCardOnGame:"+carteJouee.toString());
                 // Ajoute la carte joué à la map des cartes joué
                 cartePlay.get(carteJouee.getCouleur()).add(carteJouee);
             }
@@ -220,7 +222,7 @@ public class Game implements Runnable {
     private void resetParty() {
         // 1. Reset toutes les mains
         for (Joueur joueur : joueurs)
-                joueur.clearMain();
+            joueur.clearMain();
 
         // 2. Previens les humains
         for (Joueur joueur : joueurs)

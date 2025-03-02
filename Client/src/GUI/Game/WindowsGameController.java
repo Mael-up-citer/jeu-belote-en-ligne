@@ -111,6 +111,8 @@ public class WindowsGameController extends Gui {
     @FXML
     private ImageView CardDumpImg4; // Image des cartes joué en 4eme
 
+    private ArrayList<ImageView> cardDumpImg;   // List de toutes les cardDump
+    private int indexCardDump = 0;
 
     // Stocke le fond sombre quand le jeu attend les joueurs
     private Pane dimmingPane;
@@ -134,6 +136,13 @@ public class WindowsGameController extends Gui {
     public void initialize() {
         GameManager gameManager = new GameManager();
         initializeCOMMANDMAP();
+
+            // Initialisation de la liste pour contenir toutes les images
+            cardDumpImg = new ArrayList<>();
+            cardDumpImg.add(CardDumpImg1);
+            cardDumpImg.add(CardDumpImg2);
+            cardDumpImg.add(CardDumpImg3);
+            cardDumpImg.add(CardDumpImg4);
 
         EventManager.getInstance().subscribe("GameManager:message_received", (eventType, data) -> {
             if (data instanceof String) {
@@ -216,6 +225,7 @@ public class WindowsGameController extends Gui {
         COMMANDMAP.put("AtoutIsSet", unused -> atoutIsSet());
         COMMANDMAP.put("ClearHand", unused -> ClearHand());
         COMMANDMAP.put("Play", this::play);
+        COMMANDMAP.put("AddCardOnGame", this::AddCardOnGame);
     }
 
     // Met à jour le label indiquant le nombre de joueur présent / celui attendu
@@ -230,6 +240,7 @@ public class WindowsGameController extends Gui {
         for (String name : cartes) {
             // Créer une instance de MyImageView
             MyImageView imageView = new MyImageView(name, prefix + name + suffix);
+            imageView.setParentPane(CadrePlayer1);
 
             // Ajouter la carte à la collection
             deck.put(name, imageView);
@@ -323,8 +334,21 @@ public class WindowsGameController extends Gui {
         // Pour chaque carte jouable
         for(String carte : str)
             if (deck.containsKey(carte))
-                deck.get(carte).activate(); // Active la carte avec la nouvelle méthode
-    }    
+                deck.get(carte).activate(); // Active la carte
+    }   
+    
+    // Montre quelle carte vient d'être joué
+    private void AddCardOnGame(String carteJouer) {
+        cardDumpImg.get(indexCardDump).setImage(new Image(getClass().getResource(prefix + carteJouer + suffix).toExternalForm()));
+        indexCardDump++;
+    }
+
+    // Vide la dépose de carte
+    private void clearCardDump() {
+        cardDumpImg.clear();
+    }
+
+
 
     public static void setIdGame(String idG) {
         idGame = idG;

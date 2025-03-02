@@ -61,6 +61,7 @@ public class GameManager {
         COMMANDMAPSERVER.put("GetAtout2", unused -> askAtout2());
         COMMANDMAPSERVER.put("AtoutIsSet", this::atoutIsSet);
         COMMANDMAPSERVER.put("Play", this::play);
+        COMMANDMAPSERVER.put("AddCardOnGame", this::AddCardOnGame);
     }
 
     /**
@@ -155,6 +156,10 @@ public class GameManager {
     private void play(String possibiliti) {
         System.out.println("je peux jouer "+possibiliti);
         EventManager.getInstance().publish(NAMEPUBLISH, "Play:"+possibiliti);
+    }
+
+    private void AddCardOnGame(String carteJouer) {
+        EventManager.getInstance().publish(NAMEPUBLISH, "AddCardOnGame:"+carteJouer.toString());
     }
 
 

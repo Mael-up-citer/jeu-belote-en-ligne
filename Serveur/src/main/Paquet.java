@@ -4,7 +4,6 @@ import java.util.Random;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 
@@ -52,7 +51,7 @@ public class Paquet {
          * Enumération représentant les types (ou valeurs) des cartes.
          */
         public enum Type {
-            SEPT(0), HUIT(0), NEUF(0), VALET(2), DAMME(3), ROI(4), DIX(10), AS(11),;
+            SEPT(0), HUIT(0), NEUF(0), VALET(2), DAMME(3), ROI(4), DIX(10), AS(11);
 
             private final int value;  // Valeur en points d'une carte
 
@@ -116,15 +115,21 @@ public class Paquet {
          */
         @Override
         public int compareTo(Carte c) {
-            // Si this est un atout et pas c, this est forcement supérieur
+            // Si cette carte est un atout et que l'autre ne l'est pas, cette carte est forcément supérieure
             if (this.getCouleur().getIsAtout() && !c.getCouleur().getIsAtout())
                 return 1;
-            // Même logique sauf qu'ici c est atout
-            else if (!this.getCouleur().getIsAtout() && c.getCouleur().getIsAtout())
-                return 0;
 
-            // Si les 2 cartes sont atout ou aucune d'elles l'est, on compare leur nb de points
-            return this.getNbPoint() - c.getNbPoint();
+            // Si l'autre carte est un atout et que cette carte ne l'est pas, l'autre carte est supérieure
+            if (!this.getCouleur().getIsAtout() && c.getCouleur().getIsAtout())
+                return -1;
+
+            // Si les 2 cartes sont atout ou aucun d'ele ne l'est:
+            // Compare leurs nombres de point
+            int diffPoints = this.getNbPoint() - c.getNbPoint();
+            if (diffPoints != 0) return diffPoints;
+
+            // Si les points sont égaux, comparer sur l'ordinal (ordre d'apparition)
+            return this.getType().ordinal() - c.getType().ordinal();
         }
 
         /**
