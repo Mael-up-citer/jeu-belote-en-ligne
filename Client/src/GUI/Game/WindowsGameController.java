@@ -3,6 +3,7 @@ package GUI.Game;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.function.Consumer;
 
@@ -90,13 +91,15 @@ public class WindowsGameController extends Gui {
 
     // Contenaire des cartes de chaque joueurs
     @FXML
-    private FlowPane CadrePlayer1;
+    private FlowPane Mycadre;
     @FXML
-    private FlowPane CadrePlayer2;
+    private FlowPane leftCadre;
     @FXML
-    private FlowPane CadrePlayer3;
+    private FlowPane frontCadre;
     @FXML
-    private FlowPane CadrePlayer4;
+    private FlowPane rightCadre;
+    // Map qui lie le pane d'un joueur à son numéro pour rendre le jeu rélaliste
+    private Map<Integer, FlowPane> joueurDispatch;
 
 
     @FXML
@@ -131,18 +134,13 @@ public class WindowsGameController extends Gui {
     // Table de dispatching pour associer les commandes à leurs méthodes
     private final Map<String, Consumer<String>> COMMANDMAP = new HashMap<>();
 
+    private int noPlayer = 0; // Numéro du joueur
+
 
     @FXML
     public void initialize() {
         GameManager gameManager = new GameManager();
         initializeCOMMANDMAP();
-
-            // Initialisation de la liste pour contenir toutes les images
-            cardDumpImg = new ArrayList<>();
-            cardDumpImg.add(CardDumpImg1);
-            cardDumpImg.add(CardDumpImg2);
-            cardDumpImg.add(CardDumpImg3);
-            cardDumpImg.add(CardDumpImg4);
 
         EventManager.getInstance().subscribe("GameManager:message_received", (eventType, data) -> {
             if (data instanceof String) {
@@ -153,6 +151,20 @@ public class WindowsGameController extends Gui {
                     Platform.runLater(() -> handler.accept(serveurResponse[1]));
             }
         });
+
+        // Initialise la map de dispatch
+        joueurDispatch = new HashMap<>();
+        joueurDispatch.put(noPlayer, Mycadre);
+        joueurDispatch.put((noPlayer+1)%4, leftCadre);
+        joueurDispatch.put((noPlayer+2)%4, frontCadre);
+        joueurDispatch.put((noPlayer+3)%4, rightCadre);
+
+        // Initialisation de la liste pour contenir toutes les images des cartes jouer au fils des tours
+        cardDumpImg = new ArrayList<>();
+        cardDumpImg.add(CardDumpImg1);
+        cardDumpImg.add(CardDumpImg2);
+        cardDumpImg.add(CardDumpImg3);
+        cardDumpImg.add(CardDumpImg4);
 
         applyDimmingEffect();  // On applique l'effet sombre ici
 
@@ -195,7 +207,12 @@ public class WindowsGameController extends Gui {
     /**
      * Retire l'effet d'assombrissement et réactive l'intéraction avec mainPane
      */
-    private void onGameStart() {
+    private void onGameStart(String noPlayer) {
+        try {
+            this.noPlayer = Integer.parseInt(noPlayer);
+        } catch (Exception e) {
+        }
+
         Platform.runLater(() -> {
             if (mainPane.getChildren().contains(dimmingPane))
                 mainPane.getChildren().remove(dimmingPane);  // Supprime le fond sombre
@@ -217,12 +234,12 @@ public class WindowsGameController extends Gui {
      */
     private void initializeCOMMANDMAP() {
         COMMANDMAP.put("PlayerJoin", this::onPlayerJoin);
-        COMMANDMAP.put("GameStart", unused -> onGameStart());
+        COMMANDMAP.put("GameStart", this::onGameStart);
         COMMANDMAP.put("PlayerHand", this::dispPlayerHand);
         COMMANDMAP.put("SetMiddleCard",  this::dispMiddleCard);
         COMMANDMAP.put("GetAtout1", unused -> askAtout1());
         COMMANDMAP.put("GetAtout2", unused -> askAtout2());
-        COMMANDMAP.put("AtoutIsSet", unused -> atoutIsSet());
+        COMMANDMAP.put("AtoutIsSet",  this::atoutIsSet);
         COMMANDMAP.put("ClearHand", unused -> ClearHand());
         COMMANDMAP.put("Play", this::play);
         COMMANDMAP.put("AddCardOnGame", this::AddCardOnGame);
@@ -240,14 +257,14 @@ public class WindowsGameController extends Gui {
         for (String name : cartes) {
             // Créer une instance de MyImageView
             MyImageView imageView = new MyImageView(name, prefix + name + suffix);
-            imageView.setParentPane(CadrePlayer1);
+            imageView.setParentPane(Mycadre);
 
             // Ajouter la carte à la collection
             deck.put(name, imageView);
         }
 
         // Ajouter toutes les cartes affichées au cadre du joueur
-        CadrePlayer1.getChildren().addAll(deck.values());
+        Mycadre.getChildren().addAll(deck.values());
     }
 
     // Affiche la carte du milieu
@@ -300,14 +317,35 @@ public class WindowsGameController extends Gui {
     }
 
     // Quand l'atout est set on désactive la pane du choix de l'atout
-    private void atoutIsSet() {
+    private void atoutIsSet(String noPlayer) {
         // 1. Désactive la pane du choix de l'atout
         AtoutPane.setVisible(false);
 
-        // 2. Marque qui à pris
+        // 2. Affiche les cartes de dos des ennemis
+        Image imageDos = new Image(getClass().getResource(prefix + "dos" + suffix).toExternalForm()); // Chargement unique
+        int nombreCartes = deck.size() + 3; // Stockage du calcul
 
-        // 3. Set le label atout
+        for (Pane pane : joueurDispatch.values()) {
+            List<ImageView> images = new ArrayList<>(nombreCartes);
+            for (int i = 0; i < nombreCartes; i++) {
+                images.add(creerImageView(imageDos));
+            }
+            pane.getChildren().addAll(images); // Ajout en lot (meilleur perf)
+        }
 
+        // 3. Marque qui à pris
+
+        // 4. Set le label atout
+        
+    }
+
+    // Factory method pour éviter la duplication du code
+    private ImageView creerImageView(Image image) {
+        ImageView img = new ImageView(image);
+        img.setFitWidth(60);
+        img.setFitHeight(125);
+        img.setPreserveRatio(true);
+        return img;
     }
 
     // Si personne ne prend on désafiche toutes les cartes
@@ -321,7 +359,7 @@ public class WindowsGameController extends Gui {
         for (ImageView iv : deck.values())
             iv.setImage(null);
 
-        CadrePlayer1.getChildren().clear();
+        Mycadre.getChildren().clear();
         deck.clear();
     }
 
@@ -341,11 +379,22 @@ public class WindowsGameController extends Gui {
     private void AddCardOnGame(String carteJouer) {
         cardDumpImg.get(indexCardDump).setImage(new Image(getClass().getResource(prefix + carteJouer + suffix).toExternalForm()));
         indexCardDump++;
+
+        // Si on ajoute la 4eme et dernière carte on laissel le temps a tout le monde de la voir
+        if (indexCardDump == 3) {
+            try {
+                Thread.sleep(1000);
+            } catch (InterruptedException e) {
+            }
+            // Laisse le joueur voir ce qu'il ce passe
+            clearCardDump();    // Vide le dépose
+        }
     }
 
     // Vide la dépose de carte
     private void clearCardDump() {
         cardDumpImg.clear();
+        indexCardDump = 0;
     }
 
 

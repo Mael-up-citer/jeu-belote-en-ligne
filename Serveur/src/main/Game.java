@@ -63,7 +63,12 @@ public class Game implements Runnable {
 
         // Attends le chargement des UI Clients
         try{Thread.sleep(100);} catch(InterruptedException e) {}
-        majAllClients("GameStart:$");
+
+        // Previens les humains que le jeu commence et leur envoie leur numero
+        for (int i = 0; i < joueurs.length; i++){
+            if (joueurs[i] instanceof Humain)
+                ((Humain) joueurs[i]).notifier("GameStart:"+i);
+        }
     }
 
     /**

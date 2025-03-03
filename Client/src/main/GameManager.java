@@ -54,7 +54,7 @@ public class GameManager {
      */
     private void initializeCOMMANDMAPServer() {
         // Commande pour la comunication arrivant du serveur
-        COMMANDMAPSERVER.put("GameStart", unused -> onGameStart());
+        COMMANDMAPSERVER.put("GameStart", this::onGameStart);
         COMMANDMAPSERVER.put("SetMain", this::onReceiveHand);
         COMMANDMAPSERVER.put("SetMiddleCard", this::SetMiddleCard);
         COMMANDMAPSERVER.put("GetAtout1", unused -> askAtout1());
@@ -81,9 +81,9 @@ public class GameManager {
      */
 
     // Publie un event pour prévenir la GUI que la partie commence
-    private void onGameStart() {
+    private void onGameStart(String noPlayer) {
         System.out.println("je vais dire a la Gui que la game start");
-        EventManager.getInstance().publish(NAMEPUBLISH, "GameStart:$");
+        EventManager.getInstance().publish(NAMEPUBLISH, "GameStart:"+noPlayer);
     }
 
     // Quand le serveur partage la main du joueur si elle est vide on reset la main

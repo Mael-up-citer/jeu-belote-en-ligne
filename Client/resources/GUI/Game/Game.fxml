@@ -125,9 +125,9 @@
             <ProgressIndicator fx:id="progressIndicator" layoutX="82.0" layoutY="139.0" progress="0.0" visible="false" />
          </children>
       </Pane>
-      <FlowPane fx:id="CadrePlayer1" layoutX="361.0" layoutY="526.0" prefHeight="166.0" prefWidth="475.0" />
-      <FlowPane fx:id="CadrePlayer3" layoutX="421.0" layoutY="3.0" prefHeight="166.0" prefWidth="363.0" />
-      <FlowPane fx:id="CadrePlayer2" layoutX="-59.0" layoutY="280.0" prefHeight="198.0" prefWidth="363.0" rotate="90.0" />
-      <FlowPane fx:id="CadrePlayer4" layoutX="960.0" layoutY="267.0" prefHeight="196.0" prefWidth="395.0" rotate="90.0" />
+      <FlowPane fx:id="Mycadre" layoutX="361.0" layoutY="526.0" prefHeight="166.0" prefWidth="475.0" />
+      <FlowPane fx:id="frontCadre" layoutX="421.0" layoutY="3.0" prefHeight="166.0" prefWidth="363.0" />
+      <FlowPane fx:id="leftCadre" layoutX="-59.0" layoutY="280.0" prefHeight="198.0" prefWidth="363.0" rotate="90.0" />
+      <FlowPane fx:id="rightCadre" layoutX="960.0" layoutY="267.0" prefHeight="196.0" prefWidth="395.0" rotate="90.0" />
    </children>
 </AnchorPane>
