@@ -1,10 +1,14 @@
 package GUI;
 
 import javafx.application.Platform;
+
 import javafx.fxml.FXMLLoader;
+
 import javafx.stage.Stage;
 import javafx.scene.Scene;
+
 import javafx.scene.layout.Pane;
+
 import javafx.scene.control.Alert;
 import javafx.scene.control.ButtonType;
 

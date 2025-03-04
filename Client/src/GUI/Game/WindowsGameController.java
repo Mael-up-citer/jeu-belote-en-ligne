@@ -1,5 +1,38 @@
 package GUI.Game;
 
+
+import GUI.Gui;
+import main.GameManager;
+import main.EventManager;
+
+
+import javafx.fxml.FXML;
+
+import javafx.application.Platform;
+import javafx.animation.PauseTransition;
+import javafx.util.Duration;
+
+import javafx.scene.layout.Pane;
+import javafx.scene.layout.AnchorPane;
+import javafx.scene.layout.BorderPane;
+import javafx.scene.layout.StackPane;
+import javafx.scene.layout.FlowPane;
+import javafx.scene.layout.VBox;
+import javafx.scene.layout.HBox;
+
+import javafx.scene.input.MouseEvent;
+
+import javafx.scene.control.ProgressIndicator;
+import javafx.scene.effect.DropShadow;
+import javafx.scene.Node;
+import javafx.scene.control.Button;
+import javafx.scene.control.Label;
+import javafx.scene.control.ProgressIndicator;
+import javafx.scene.image.Image;
+import javafx.scene.image.ImageView;
+import javafx.scene.transform.Scale;
+
+
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -7,38 +40,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.function.Consumer;
 
-import javax.swing.border.Border;
-
-import GUI.Gui;
-import main.EventManager;
-import javafx.scene.transform.Scale;
-import main.GameManager;
-import javafx.fxml.FXML;
-import javafx.scene.layout.Pane;
-import javafx.scene.layout.BorderPane;
-import javafx.scene.layout.StackPane;
-import javafx.scene.layout.FlowPane;
-import javafx.scene.control.ProgressIndicator;
-import javafx.scene.effect.ColorAdjust;
-import javafx.scene.input.MouseEvent;
-import javafx.application.Platform;
-
-import javafx.scene.control.Button;
-import javafx.scene.control.Label;
-import javafx.scene.input.MouseEvent;
-import javafx.scene.layout.Pane;
-import javafx.scene.layout.VBox;
-import javafx.scene.layout.HBox;
-import javafx.scene.layout.AnchorPane;
-import javafx.scene.input.TransferMode;
-import javafx.scene.input.ClipboardContent;
-import javafx.scene.Node;
-import javafx.application.Platform;
-import javafx.scene.effect.DropShadow;
-import javafx.scene.paint.Color;
-import javafx.scene.control.ProgressIndicator;
-import javafx.scene.image.Image;
-import javafx.scene.image.ImageView;
 
 public class WindowsGameController extends Gui {
     private final String NAMEPUBLISH = "GameGui:Gui_response";
@@ -103,7 +104,7 @@ public class WindowsGameController extends Gui {
 
 
     @FXML
-    private StackPane CardDump; // Contenaire des cartes d'une partie
+    private Pane CardDump; // Contenaire des cartes d'une partie
     // Contenaire des images des cartes joué (1 plis = 1-4 cartes)
     @FXML
     private ImageView CardDumpImg1; // Image des cartes joué en 1er
@@ -242,7 +243,7 @@ public class WindowsGameController extends Gui {
         COMMANDMAP.put("AtoutIsSet",  this::atoutIsSet);
         COMMANDMAP.put("ClearHand", unused -> ClearHand());
         COMMANDMAP.put("Play", this::play);
-        COMMANDMAP.put("AddCardOnGame", this::AddCardOnGame);
+        COMMANDMAP.put("AddCardOnGame", this::addCardOnGame);
     }
 
     // Met à jour le label indiquant le nombre de joueur présent / celui attendu
@@ -270,7 +271,7 @@ public class WindowsGameController extends Gui {
     // Affiche la carte du milieu
     private void dispMiddleCard(String carte) {
         nameMiddleCarte = carte.split("De")[1];    // Garde en mémoir le nom de la carte
-        CardDumpImg1.setImage(new Image(getClass().getResource(prefix + carte + suffix).toExternalForm()));
+        CardDumpImg2.setImage(new Image(getClass().getResource(prefix + carte + suffix).toExternalForm()));
     }
 
     // Active tout les buttons atouts
@@ -323,7 +324,7 @@ public class WindowsGameController extends Gui {
 
         // 2. Affiche les cartes de dos des ennemis
         Image imageDos = new Image(getClass().getResource(prefix + "dos" + suffix).toExternalForm()); // Chargement unique
-        int nombreCartes = deck.size() + 3; // Stockage du calcul
+        int nombreCartes = deck.size() + 3;
 
         for (Pane pane : joueurDispatch.values()) {
             List<ImageView> images = new ArrayList<>(nombreCartes);
@@ -353,7 +354,7 @@ public class WindowsGameController extends Gui {
         nameMiddleCarte = null;
 
         // 1. Enlève la carte du milieu
-        CardDumpImg1.setImage(null);
+        CardDumpImg2.setImage(null);
 
         // 2. Enlève la main du joueur
         for (ImageView iv : deck.values())
@@ -374,29 +375,26 @@ public class WindowsGameController extends Gui {
             if (deck.containsKey(carte))
                 deck.get(carte).activate(); // Active la carte
     }   
-    
+
     // Montre quelle carte vient d'être joué
-    private void AddCardOnGame(String carteJouer) {
+    private void addCardOnGame(String carteJouer) {
         cardDumpImg.get(indexCardDump).setImage(new Image(getClass().getResource(prefix + carteJouer + suffix).toExternalForm()));
         indexCardDump++;
 
-        // Si on ajoute la 4eme et dernière carte on laissel le temps a tout le monde de la voir
-        if (indexCardDump == 3) {
-            try {
-                Thread.sleep(1000);
-            } catch (InterruptedException e) {
-            }
-            // Laisse le joueur voir ce qu'il ce passe
-            clearCardDump();    // Vide le dépose
+        // Si on ajoute la 4ème et dernière carte, on laisse le temps à tout le monde de la voir
+        if (indexCardDump == 4) {
+            PauseTransition pause = new PauseTransition(Duration.millis(800));
+            pause.setOnFinished(event -> clearCardDump()); // Vide le dépôt après 1s
+            pause.play();
         }
     }
 
-    // Vide la dépose de carte
     private void clearCardDump() {
-        cardDumpImg.clear();
+        for (int i = 0; i < cardDumpImg.size(); i++)
+            cardDumpImg.get(i).setImage(null);
+
         indexCardDump = 0;
     }
-
 
 
     public static void setIdGame(String idG) {

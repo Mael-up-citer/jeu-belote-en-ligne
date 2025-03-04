@@ -9,6 +9,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
+
 public class Equipe {
     private Joueur j1;
     private Joueur j2;

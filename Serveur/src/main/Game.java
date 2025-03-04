@@ -65,10 +65,10 @@ public class Game implements Runnable {
         try{Thread.sleep(100);} catch(InterruptedException e) {}
 
         // Previens les humains que le jeu commence et leur envoie leur numero
-        for (int i = 0; i < joueurs.length; i++){
+        for (int i = 0; i < joueurs.length; i++)
             if (joueurs[i] instanceof Humain)
                 ((Humain) joueurs[i]).notifier("GameStart:"+i);
-        }
+
     }
 
     /**
@@ -81,6 +81,7 @@ public class Game implements Runnable {
             while (!partieTerminee()) {
                 huitPlis();
                 indexDonne = (indexDonne+1) % joueurs.length; // Après chaque 8 plis on avance dans la donne
+                premierJoueur = indexDonne+1;
             }
         } catch (Exception e) {
             e.printStackTrace();
@@ -104,6 +105,8 @@ public class Game implements Runnable {
         // Si on ne prend pas d'atout
         if (atout == null) return; // Quitte et recommence
 
+        Joueur.colorAtout = atout;  // Set la couleur de l'atout aux joueurs
+
         // Distribuer les cartes restantes
         distribuerNCartes(3, joueurs[indexJoueurApris]);
         for (Joueur joueur : joueurs) joueur.sortCard();
@@ -119,6 +122,12 @@ public class Game implements Runnable {
                 majAllClients("AddCardOnGame:"+carteJouee.toString());
                 // Ajoute la carte joué à la map des cartes joué
                 cartePlay.get(carteJouee.getCouleur()).add(carteJouee);
+            }
+            // Mettre une pause de 1 seconde avant de continuer au tour suivant
+            try {
+                Thread.sleep(1200);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt(); // Bonne pratique : réinterrompre le thread
             }
             premierJoueur = (premierJoueur +plis[plis.length - nbTour].getWinner()) % joueurs.length;
             nbTour--;

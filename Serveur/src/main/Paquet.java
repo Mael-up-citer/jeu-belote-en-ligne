@@ -1,8 +1,10 @@
 package src.main;
 
 import java.util.Random;
+
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -130,6 +132,15 @@ public class Paquet {
 
             // Si les points sont égaux, comparer sur l'ordinal (ordre d'apparition)
             return this.getType().ordinal() - c.getType().ordinal();
+        }
+
+        @Override
+        public boolean equals(Object obj) {
+            if (this == obj) return true; // Même référence
+            if (obj == null || getClass() != obj.getClass()) return false; // Vérifie la non-nullité et la classe
+            Carte other = (Carte) obj;
+            // Pour les enums, la comparaison par '==' est suffisante
+            return this.couleur == other.couleur && this.type == other.type;
         }
 
         /**
@@ -275,7 +286,7 @@ public class Paquet {
         // Ajouter les cartes de l'équipe 1 en tête de la liste
         cartes.addAll(0, cartesEquipe1);
     }
-    
+
 
     /**
      * Réinitialise l'indice d'accès à 0, ce qui permet de recommencer à parcourir

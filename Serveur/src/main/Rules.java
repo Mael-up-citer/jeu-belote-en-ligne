@@ -9,12 +9,13 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Collections;
 
+
 /**
  * Classe abstraite implémentant les algorithmes de règles du jeu.
  */
 public abstract class Rules {
 
-    /**
+   /**
      * Détermine les cartes jouables par un joueur dans un pli donné en appliquant les règles de la Belote.
      *
      * @param contexte Le pli en cours.
@@ -22,119 +23,154 @@ public abstract class Rules {
      * @return Une liste des cartes jouables par le joueur.
      */
     public static List<Carte> playable(Plis contexte, Joueur player) {
-        List<Carte> res = new ArrayList<>();
-        HashMap<Couleur, List<Carte>> playerMain = player.getMain();
-        Paquet.Carte[] cartesPlis = contexte.getPlis();
-        Carte asked = cartesPlis[0]; // Première carte jouée du pli
-    
-        // Cas où le joueur est le premier à jouer -> il peut jouer ce qu'il veut
-        if (asked == null) {
-            return playerMain.values()
-                    .stream()
-                    .flatMap(List::stream)
-                    .collect(Collectors.toList());
-        }
-    
-        boolean atoutDéjàPrésent = (contexte.getPowerfullCard() != null) && contexte.getPowerfullCard().getCouleur().getIsAtout();
-    
-        // Vérifie si la couleur demandée est un atout
-        if (asked.getCouleur().getIsAtout()) {
-            List<Carte> cartesAtout = playerMain.get(asked.getCouleur());
-    
-            if (cartesAtout != null && !cartesAtout.isEmpty()) {
-                // Si l'atout est déjà présent dans le pli, il faut monter si possible
-                for (Carte carte : cartesAtout)
-                    if (!atoutDéjàPrésent || carte.compareTo(contexte.getPowerfullCard()) > 0)
-                        res.add(carte);
+        // Si le joueur est le premier à jouer, il peut jouer n’importe quelle carte.
+        if (contexte.getPlis()[0] == null) return getAllCards(player);
 
-                // Si aucune carte ne bat la plus forte, jouer un atout quelconque
-                if (res.isEmpty())
-                    res.addAll(cartesAtout);
+        Carte carteDemande = contexte.getPlis()[0];
+        boolean atoutDejaPresent = contexte.getPowerfullCard().getCouleur().getIsAtout();
 
-            } else {
-                // Pas d'atout -> peut jouer n'importe quoi
-                return playerMain.values()
-                        .stream()
-                        .flatMap(List::stream)
-                        .collect(Collectors.toList());
-            }
-        } else {
-            // Si ce n'est pas un atout, on regarde si on peut suivre la couleur demandée
-            List<Carte> cartesDemandées = playerMain.get(asked.getCouleur());
-    
-            if (cartesDemandées != null && !cartesDemandées.isEmpty())
-                return cartesDemandées;
-            else {
-                // Si le joueur n'a pas cette couleur, il peut jouer ce qu'il veut
-                return playerMain.values()
-                        .stream()
-                        .flatMap(List::stream)
-                        .collect(Collectors.toList());
-            }
+        // Si la couleur demandée est un atout
+        if (carteDemande.getCouleur().getIsAtout()) return playAtout(contexte, player);
+
+        // Sinon, la couleur demandée n'est pas un atout
+        else return playNonAtout(contexte, player, carteDemande, atoutDejaPresent);
+    }
+
+    /**
+     * Gestion du cas où la carte demandée est un atout.
+     */
+    private static List<Carte> playAtout(Plis contexte, Joueur player) {
+        List<Carte> atoutCards = getCardsOfColor(player, contexte.getPlis()[0].getCouleur());
+        if (atoutCards == null || atoutCards.isEmpty())
+            // Si le joueur ne possède pas d'atouts, il peut jouer n'importe quelle carte.
+            return getAllCards(player);
+
+        // On recherche les atouts qui permettent de surcouper le pli
+        List<Carte> overcutCards = getOvercutCards(atoutCards, contexte.getPowerfullCard());
+        // S'il en existe, le joueur doit les jouer
+        if (!overcutCards.isEmpty()) return overcutCards;
+
+        // Sinon, il doit jouer un atout, même s'il ne peut pas surcouper
+        return atoutCards;
+    }
+
+    /**
+     * Gestion du cas où la carte demandée n'est pas un atout.
+     */
+    private static List<Carte> playNonAtout(Plis contexte, Joueur player, Carte carteDemande, boolean atoutDejaPresent) {
+        // Si le joueur peut suivre la couleur demandée, il doit le faire.
+        List<Carte> cardsOfColor = getCardsOfColor(player, carteDemande.getCouleur());
+        if (cardsOfColor != null && !cardsOfColor.isEmpty()) return cardsOfColor;
+
+        // Le joueur n'a pas la couleur demandée, il doit alors couper s'il possède des atouts.
+        List<Carte> atoutCards = getCardsOfColor(player, Joueur.colorAtout);
+        if (atoutCards != null && !atoutCards.isEmpty()) {
+            if (atoutDejaPresent) {
+                // Si quelqu'un a déjà coupé, il faut tenter de surcouper.
+                List<Carte> overcutCards = getOvercutCards(atoutCards, contexte.getPowerfullCard());
+                // S'il ne peut pas surcouper, il est quand même obligé de couper.
+                if (!overcutCards.isEmpty()) return overcutCards;
+                else  return atoutCards;
+            } 
+            else
+                // Si personne n'a encore coupé, jouer un atout.
+                return atoutCards;
         }
-    
-        return res.isEmpty() ? playerMain.values()
-                .stream()
+
+        // Si le joueur ne possède ni la couleur demandée ni d'atout, il peut jouer n'importe quelle carte.
+        return getAllCards(player);
+    }
+
+    /**
+     * Renvoie toutes les cartes de la main du joueur.
+     */
+    private static List<Carte> getAllCards(Joueur player) {
+        return player.getMain().values().stream()
                 .flatMap(List::stream)
-                .collect(Collectors.toList()) : res;
-    }    
+                .collect(Collectors.toList());
+    }
 
     /**
-     * Retourne toutes les cartes jouables dans un pli en fonction des cartes déjà jouées.
-     * Utile pour les IA afin de déterminer les coups possibles.
-     *
-     * @param contexte   Le pli en cours.
-     * @param cartePlay  Les cartes déjà jouées dans la partie.
-     * @param paquet     Le paquet complet des cartes du jeu.
-     * @return Une liste des cartes encore jouables.
+     * Renvoie la liste des cartes de la main du joueur pour une couleur donnée.
      */
-    public static List<Carte> successeur(Plis contexte, HashMap<Couleur, List<Carte>> cartePlay, Paquet paquet) {
-        Carte asked = contexte.getPlis()[0]; // Première carte jouée dans le pli
+    private static List<Carte> getCardsOfColor(Joueur player, Couleur couleur) {
+        return player.getMain().get(couleur);
+    }
 
-        // Si aucune carte n'a été jouée, toutes les cartes non jouées sont disponibles
-        if (asked == null) {
-            return cardNotPlayed(cartePlay, paquet);
+    /**
+     * Renvoie la liste des atouts permettant de surcouper l'atout actuellement le plus fort dans le pli.
+     */
+    private static List<Carte> getOvercutCards(List<Carte> atoutCards, Carte currentPowerful) {
+        List<Carte> res = new ArrayList<>();
+        for (Carte carte : atoutCards)
+            if (carte.compareTo(currentPowerful) > 0)
+                res.add(carte);
+
+        return res;
+    }
+
+
+    ////////////////////////////////////////////////////////////////////////////////////
+    // Méthode pour l'IA : calcul des successeurs (cartes non jouées) en fonction du contexte //
+    ////////////////////////////////////////////////////////////////////////////////////
+
+    /**
+     * Retourne l'ensemble des cartes encore jouables dans le jeu en fonction des cartes déjà jouées.
+     * Cette méthode est utile pour les simulations et l'IA afin de déterminer les coups possibles.
+     *
+     * Règles appliquées :
+     * - Si aucun coup n'a été joué dans le pli, toutes les cartes non jouées sont disponibles.
+     * - Si la couleur demandée est toujours présente dans le jeu, seules ces cartes sont considérées.
+     * - En cas de demande d'atout, et si un atout a déjà été joué, il faut surcouper si possible.
+     *
+     * @param contexte      Le pli en cours.
+     * @param cartesJouees  Les cartes déjà jouées, organisées par couleur.
+     * @param paquet        Le paquet complet des cartes du jeu.
+     * @return La liste des cartes non jouées filtrées selon la règle du suivi.
+     */
+    public static List<Carte> successeur(Plis contexte, HashMap<Couleur, List<Carte>> cartesJouees, Paquet paquet) {
+        Carte carteDemandee = contexte.getPlis()[0];
+        List<Carte> nonJouees = cardNotPlayed(cartesJouees, paquet);
+
+        if (carteDemandee == null) return nonJouees;
+
+        if (carteDemandee.getCouleur().getIsAtout()) {
+            // Cas où la couleur demandée est un atout.
+            if (contexte.getPowerfullCard() != null && contexte.getPowerfullCard().getCouleur().getIsAtout()) {
+                List<Carte> atouts = nonJouees.stream()
+                        .filter(c -> c.getCouleur().getIsAtout())
+                        .collect(Collectors.toList());
+                List<Carte> surcoups = getOvercutCards(atouts, contexte.getPowerfullCard());
+                if (!surcoups.isEmpty()) return surcoups;
+                else return atouts;
+            }
+            else {
+                // Aucun atout joué : seules les cartes atout non jouées sont autorisées.
+                return nonJouees.stream()
+                        .filter(c -> c.getCouleur().getIsAtout())
+                        .collect(Collectors.toList());
+            }
         }
-
-        // Vérifier si la couleur demandée a encore des cartes non jouées
-        List<Carte> cartesRestantes = cardByColorNotPlayed(asked.getCouleur(), cartePlay, paquet);
-        
-        return !cartesRestantes.isEmpty() ? cartesRestantes : cardNotPlayed(cartePlay, paquet);
+        else {
+            // Pour une couleur non-atout, vérifier s'il reste des cartes de cette couleur.
+            List<Carte> cartesCouleur = nonJouees.stream()
+                    .filter(c -> c.getCouleur() == carteDemandee.getCouleur())
+                    .collect(Collectors.toList());
+            if (!cartesCouleur.isEmpty()) return cartesCouleur;
+            else return nonJouees;
+        }
     }
 
     /**
-     * Retourne les cartes encore jouables d'une couleur donnée.
+     * Renvoie l'ensemble des cartes du paquet qui n'ont pas encore été jouées.
      *
-     * @param couleur   La couleur des cartes recherchées.
-     * @param cartePlay Les cartes déjà jouées.
-     * @param paquet    Le paquet complet des cartes du jeu.
-     * @return Une liste des cartes de la couleur donnée qui n'ont pas encore été jouées.
+     * @param cartesJouees Les cartes déjà jouées, organisées par couleur.
+     * @param paquet       Le paquet complet.
+     * @return La liste des cartes non jouées.
      */
-    private static List<Carte> cardByColorNotPlayed(Couleur couleur, HashMap<Couleur, List<Carte>> cartePlay, Paquet paquet) {
-        List<Carte> allCards = paquet.getCartes().stream()
-                .filter(c -> c.getCouleur() == couleur)
-                .collect(Collectors.toList());
-
-        List<Carte> playedCards = cartePlay.getOrDefault(couleur, Collections.emptyList());
-
-        return allCards.stream()
-                .filter(carte -> !playedCards.contains(carte))
-                .collect(Collectors.toList());
-    }
-
-    /**
-     * Retourne toutes les cartes encore disponibles dans le jeu.
-     *
-     * @param cartePlay Les cartes déjà jouées.
-     * @param paquet    Le paquet complet des cartes du jeu.
-     * @return Une liste des cartes non jouées.
-     */
-    private static List<Carte> cardNotPlayed(HashMap<Couleur, List<Carte>> cartePlay, Paquet paquet) {
+    private static List<Carte> cardNotPlayed(HashMap<Couleur, List<Carte>> cartesJouees, Paquet paquet) {
         List<Carte> allCards = new ArrayList<>(paquet.getCartes());
-
-        // Supprime toutes les cartes déjà jouées
-        cartePlay.values().forEach(allCards::removeAll);
-
-        return allCards.isEmpty() ? Collections.emptyList() : allCards;
+        cartesJouees.values().forEach(allCards::removeAll);
+        return allCards;
     }
 }

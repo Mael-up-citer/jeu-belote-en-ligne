@@ -5,6 +5,7 @@ import src.main.Paquet.Carte;
 import java.io.BufferedReader;
 import java.io.PrintWriter;
 import java.net.Socket;
+
 import java.util.*;
 import java.util.function.Function;
 
@@ -15,9 +16,12 @@ import java.io.IOException;
  * Classe abstraite représentant un joueur, qu'il soit humain ou un bot.
  */
 public abstract class Joueur {
+    public static Paquet.Carte.Couleur colorAtout;  // Atout de la couleur
+
     protected Equipe equipe; // L'équipe à laquelle appartient le joueur
     protected String nom; // Le nom du joueur
     protected HashMap<Paquet.Carte.Couleur, List<Paquet.Carte>> main; // La main du joueur, organisée par couleur
+
 
     /**
      * Constructeur par défaut de la classe Joueur.
@@ -195,9 +199,11 @@ class Humain extends Joueur {
         Paquet.Carte carte = Paquet.Carte.parseCarte(cartePlaye);
 
         System.out.println("Le joueur "+nom+"  a joué la carte "+carte);
+        System.out.println("main du joueur =  "+main);
 
         // L'enlève de la main
         removeCarte(carte);
+
         // L'ajoute dans le plis
         plis.addCard(this, carte);
 
@@ -303,20 +309,24 @@ class BotDebutant extends Joueur {
 
     @Override
     public Paquet.Carte.Couleur parler(int tour) {
-        System.out.println(getNom() + " (Expert) parle.");
+        System.out.println(getNom() + " (Débutant) parle.");
         return null;
     }
 
     @Override
     public Paquet.Carte jouer(Plis plis) {
-        System.out.println("\nVoici mon jeu"+ main);
+        System.out.println("\nJeu du bot Débutant: "+ main);
         System.out.println("\n"+getNom() + " (Débutant) joue, il a le choix avec "+ Rules.playable(plis, this));
 
         // L'IA donne une carte
         Carte carte = Rules.playable(plis, this).get(0);
 
+        System.out.println("carte joué: "+carte);
         // L'ajoute dans le plis
         plis.addCard(this, carte);
+
+        // L'enlève de la main
+        removeCarte(carte);
 
         return carte;
     }
@@ -332,19 +342,22 @@ class BotMoyen extends Joueur {
 
     @Override
     public Paquet.Carte.Couleur parler(int tour) {
-        System.out.println(getNom() + " (Expert) parle.");
+        System.out.println(getNom() + " (Moyen) parle.");
         return null;
     }
 
     @Override
     public Paquet.Carte jouer(Plis plis) {
-        System.out.println(getNom() + " (Débutant) joue.");
+        System.out.println(getNom() + " (Moyen) joue.");
 
         // L'IA donne une carte
         Carte carte = Rules.playable(plis, this).get(0);
 
         // L'ajoute dans le plis
         plis.addCard(this, carte);
+
+        // L'enlève de la main
+        removeCarte(carte);
 
         return carte;
     }
@@ -373,6 +386,9 @@ class BotExpert extends Joueur {
 
         // L'ajoute dans le plis
         plis.addCard(this, carte);
+
+        // L'enlève de la main
+        removeCarte(carte);
 
         return carte;
     }

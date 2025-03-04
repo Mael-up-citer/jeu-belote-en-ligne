@@ -1,10 +1,12 @@
 package GUI.Game;
 
+import main.EventManager;
+
+import javafx.scene.layout.Pane;
+
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.transform.Scale;
-import main.EventManager;
-import javafx.scene.layout.Pane;
 
 import java.util.ArrayList;
 import java.util.List;
