@@ -9,7 +9,7 @@ public class Plis {
     private int index = 0;  // Position d'insertion dans le tableau
     private Paquet.Carte powerfullCard = null; // Carte la plus forte du pli
     private Joueur maitre; // Joueur qui possède le pli
-    private int winner; // Index de la carte qui fait gagné le plis
+    private int winner = -1; // Index de la carte qui fait gagné le plis
 
     /**
      * Ajoute une carte au pli en respectant les règles de prise de pli.
@@ -35,13 +35,15 @@ public class Plis {
                 powerfullCard = carte;
                 maitre = j;
                 winner = index;
+                System.out.println("coupe");
             }
-            // Cas 2 : Si les deux sont atouts, on garde le plus fort
+            // Cas 2 : Si les deux sont atouts, on garde la plus forte
             else if (carteActuelleEstAtout && cartePowerfullEstAtout) {
                 if (carte.compareTo(powerfullCard) > 0) {
                     powerfullCard = carte;
                     maitre = j;
                     winner = index;
+                    System.out.println("au desuss atout");
                 }
             }
             // Cas 3 : Si la carte actuelle est de la couleur demandée et que powerfullCard n'est pas un atout
@@ -50,6 +52,7 @@ public class Plis {
                     powerfullCard = carte;
                     maitre = j;
                     winner = index;
+                    System.out.println("battu");
                 }
             }
         }
@@ -57,7 +60,7 @@ public class Plis {
         // Ajouter la carte au pli
         plis[index] = carte;
         index++;
-    }    
+    }   
 
     /**
      * Calcule la valeur totale du pli en fonction des points des cartes.

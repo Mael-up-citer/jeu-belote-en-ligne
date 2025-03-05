@@ -256,6 +256,7 @@ public class WindowsGameController extends Gui {
         COMMANDMAP.put("ClearHand", unused -> ClearHand());
         COMMANDMAP.put("Play", this::play);
         COMMANDMAP.put("AddCardOnGame", this::addCardOnGame);
+        COMMANDMAP.put("SetFirstPlayer", this::setFirstPlayer);
     }
 
     // Met à jour le label indiquant le nombre de joueur présent / celui attendu
@@ -471,6 +472,13 @@ public class WindowsGameController extends Gui {
         indexCardDump = 0;
     }
 
+    // Définine qui sera le 1er joueur a jouer
+    private void setFirstPlayer(String noFirstply) {
+        try {
+            noFirstPlayer = Integer.parseInt(noFirstply);
+        } catch (Exception e) {
+        }
+    }
 
 
     public static void setIdGame(String idG) {

@@ -63,6 +63,7 @@ public class GameManager {
         COMMANDMAPSERVER.put("AtoutIsSet", this::atoutIsSet);
         COMMANDMAPSERVER.put("Play", this::play);
         COMMANDMAPSERVER.put("AddCardOnGame", this::AddCardOnGame);
+        COMMANDMAPSERVER.put("SetFirstPlayer", this::setFirstPlayer);
     }
 
     /**
@@ -163,6 +164,10 @@ public class GameManager {
 
     private void AddCardOnGame(String carteJouer) {
         EventManager.getInstance().publish(NAMEPUBLISH, "AddCardOnGame:"+carteJouer.toString());
+    }
+
+    private void setFirstPlayer(String noFirstply) {
+        EventManager.getInstance().publish(NAMEPUBLISH, "SetFirstPlayer:"+noFirstply);
     }
 
 

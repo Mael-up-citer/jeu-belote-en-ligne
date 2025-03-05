@@ -134,7 +134,11 @@ public class Game implements Runnable {
 
             // Ajoute le pli à l'équipe qui a gagné le plis
             plis[plis.length - nbTour - 1].getMaitre().getEquipe().addPlie(plis[plis.length - nbTour - 1]);
-            premierJoueur = (premierJoueur +plis[plis.length - nbTour].getWinner()) % joueurs.length;
+            premierJoueur = (premierJoueur + plis[plis.length - nbTour - 1].getWinner()) % joueurs.length;
+            System.out.println("Le gagant est le numéro: "+premierJoueur);
+            System.out.println("Le gagant est: "+joueurs[premierJoueur%NB_PLAYERS].getNom());
+
+            majAllClients("SetFirstPlayer:"+premierJoueur);
             nbTour--;
         }
 
