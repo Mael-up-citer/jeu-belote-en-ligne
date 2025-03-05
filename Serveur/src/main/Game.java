@@ -5,6 +5,7 @@ import src.main.Paquet.Carte.*;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.concurrent.CountDownLatch;
 import java.util.ArrayList;
 import java.util.HashMap;
 
@@ -48,6 +49,11 @@ public class Game implements Runnable {
             equipe1.getJ2(), 
             equipe2.getJ2() 
         };
+        // Associe les equipes aux joueurs
+        equipe1.getJ1().setEquipe(equipe1); 
+        equipe2.getJ1().setEquipe(equipe2);
+        equipe1.getJ2().setEquipe(equipe1); 
+        equipe2.getJ2().setEquipe(equipe2);
 
         this.paquet = new Paquet();
         premierJoueur = 1;
@@ -56,13 +62,13 @@ public class Game implements Runnable {
         // Init la map
         for(Couleur c : Couleur.values()) cartePlay.put(c, new ArrayList<>());
 
-        int nbPlis = paquet.getCartes().size() / NB_PLAYERS;
+        int nbPlis = paquet.getCartes().size() / NB_PLAYERS;    // taille = 8
         plis = new Plis[nbPlis];
         // Init le tab avec des plis vide
         for (int i = 0; i < nbPlis; i++) plis[i] = new Plis();
 
         // Attends le chargement des UI Clients
-        try{Thread.sleep(100);} catch(InterruptedException e) {}
+        attendreTousLesJoueurs();
 
         // Previens les humains que le jeu commence et leur envoie leur numero
         for (int i = 0; i < joueurs.length; i++)
@@ -80,6 +86,7 @@ public class Game implements Runnable {
         try {
             while (!partieTerminee()) {
                 huitPlis();
+                updateScore();
                 indexDonne = (indexDonne+1) % joueurs.length; // Après chaque 8 plis on avance dans la donne
                 premierJoueur = indexDonne+1;
             }
@@ -120,15 +127,13 @@ public class Game implements Runnable {
                 Paquet.Carte carteJouee = joueurs[i%NB_PLAYERS].jouer(plis[plis.length - nbTour - 1]);
                 // Met à jour l'affichage du millieu
                 majAllClients("AddCardOnGame:"+carteJouee.toString());
+                attendreTousLesJoueurs();   // Quand on add une carte ca joue une animation chez les humains
                 // Ajoute la carte joué à la map des cartes joué
                 cartePlay.get(carteJouee.getCouleur()).add(carteJouee);
             }
-            // Mettre une pause de 1 seconde avant de continuer au tour suivant
-            try {
-                Thread.sleep(1200);
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt(); // Bonne pratique : réinterrompre le thread
-            }
+
+            // Ajoute le pli à l'équipe qui a gagné le plis
+            plis[plis.length - nbTour - 1].getMaitre().getEquipe().addPlie(plis[plis.length - nbTour - 1]);
             premierJoueur = (premierJoueur +plis[plis.length - nbTour].getWinner()) % joueurs.length;
             nbTour--;
         }
@@ -261,6 +266,14 @@ public class Game implements Runnable {
                 .anyMatch(equipe -> equipe.getScore() >= 1000);
     }
 
+    // Envoie aux joueurs les scores des 2 equipes
+    private void updateScore() {
+        equipes[0].calculerScore(false);
+        equipes[1].calculerScore(false);
+
+        majAllClients("UpdateScore:"+equipes[0].getScore()+";"+equipes[1].getScore());
+    }
+
     /**
      * Envoie un meme message à tous les joueurs humains.
      */
@@ -279,6 +292,43 @@ public class Game implements Runnable {
         for (Joueur joueur : joueurs)
             if (joueur instanceof Humain && !joueur.equals(exclu))
                 ((Humain) joueur).notifier(message);
+    }
+
+    /**
+     * Attend que tous les joueurs (humains et IA) aient terminé leurs animations avant de continuer.
+     * 
+     * <p>Cette méthode utilise un {@link CountDownLatch} pour attendre la réponse des joueurs en parallèle,
+     * sans imposer d'ordre. Chaque joueur humain attend un message de confirmation ("RESUME") avant 
+     * de décrémenter le compteur.</p>
+     *
+     * <p>Les joueurs IA ne nécessitent pas d'attente, donc leur réponse est immédiatement comptabilisée.</p>
+     *
+     * <p>Le thread principal est bloqué avec {@code latch.await()} jusqu'à ce que tous les joueurs aient terminé.</p>
+     *
+     * @throws InterruptedException si le thread est interrompu pendant l'attente.
+     */
+    private void attendreTousLesJoueurs() {
+        CountDownLatch latch = new CountDownLatch(NB_PLAYERS);
+
+        for (Joueur joueur : joueurs) {
+            if (joueur instanceof Humain) {
+                // Exécuter l'attente dans un thread séparé
+                new Thread(() -> {
+                    ((Humain) joueur).waitForClient();
+                    latch.countDown(); // Décrémente le compteur quand le joueur a fini
+                }).start();
+            }
+            else
+                // Si c'est une IA, on réduit immédiatement le compteur
+                latch.countDown();
+        }
+
+        try {
+            latch.await(); // Attendre que tous les joueurs aient répondu
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            System.err.println("Erreur lors de l'attente des joueurs : " + e.getMessage());
+        }
     }
 
     /**

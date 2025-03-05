@@ -15,7 +15,7 @@ public class Equipe {
     private Joueur j2;
     private int score = 0;
     private boolean aPris = false;
-
+    private int beloteReBelote = 0; // Si un joueur de l'equipe a dit belote et reBelote
     private ArrayList<Plis> plis = new ArrayList<>();   // Liste des plis de l'equipe pour un tour
 
     Equipe() {
@@ -30,22 +30,33 @@ public class Equipe {
     public boolean calculerScore(boolean dixDeDer) {
         int sum = 0;
 
-        for(int i = 0; i < plis.size(); i++)
-            sum += plis.get(i).getValue();
+        for (int i = 0; i < plis.size(); i++) sum += plis.get(i).getValue();
 
-        if(dixDeDer)
-            sum+=10;
+        if (dixDeDer) sum+=10;
 
-        // Si litige prsn ne marque
-        if (sum == 81)
-            return true;
+        sum += beloteReBelote;  // Add 0 ou 20 si un joueur à dit belote et rebelotte
+
+        // Si litige
+        if (sum == 81) {
+            // L'équipe défense marque
+            if (!aPris) score += 80;
+            else return true;
+        }
+
         // Si on met plus ou moins mais qu'on a pas pris marque les pts
         else if ((sum > 81) || (sum < 81 && !aPris)) {
-            sum = sum/10 *10;
+            arrondiScore(sum);
             score += sum;   // Ajoute le resultat final
         }
+
         // Pas de litige et pas de points marqué
         return false;
+    }
+
+    // Arrondi le score 
+    private int arrondiScore(int somme) {
+        int unite = (somme % 10);
+        return (unite > 5) ? (somme + (10 - unite)) : (somme - unite); 
     }
 
     public Joueur getJ1() {

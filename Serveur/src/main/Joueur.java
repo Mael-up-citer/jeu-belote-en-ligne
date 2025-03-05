@@ -52,8 +52,7 @@ public abstract class Joueur {
 
     // Vide les listes de cartes
     public void clearMain() {
-        for (List<Carte> list : main.values())
-            list.clear();
+        for (List<Carte> list : main.values()) list.clear();
     }
 
     /**

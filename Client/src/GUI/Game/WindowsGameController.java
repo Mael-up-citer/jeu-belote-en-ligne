@@ -9,8 +9,9 @@ import main.EventManager;
 import javafx.fxml.FXML;
 
 import javafx.application.Platform;
+
 import javafx.animation.PauseTransition;
-import javafx.util.Duration;
+import javafx.animation.TranslateTransition;
 
 import javafx.scene.layout.Pane;
 import javafx.scene.layout.AnchorPane;
@@ -30,7 +31,9 @@ import javafx.scene.control.Label;
 import javafx.scene.control.ProgressIndicator;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
+
 import javafx.scene.transform.Scale;
+import javafx.geometry.Point2D;
 
 
 import java.util.ArrayList;
@@ -39,6 +42,8 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Consumer;
+import javafx.util.Duration;
+
 
 
 public class WindowsGameController extends Gui {
@@ -136,6 +141,7 @@ public class WindowsGameController extends Gui {
     private final Map<String, Consumer<String>> COMMANDMAP = new HashMap<>();
 
     private int noPlayer = 0; // Numéro du joueur
+    private int noFirstPlayer;  // Numéro du 1er joueur a jouer dans ce tour
 
 
     @FXML
@@ -159,6 +165,7 @@ public class WindowsGameController extends Gui {
         joueurDispatch.put((noPlayer+1)%4, leftCadre);
         joueurDispatch.put((noPlayer+2)%4, frontCadre);
         joueurDispatch.put((noPlayer+3)%4, rightCadre);
+        noFirstPlayer = 1; // Le tout 1er joueur est le 1er
 
         // Initialisation de la liste pour contenir toutes les images des cartes jouer au fils des tours
         cardDumpImg = new ArrayList<>();
@@ -179,6 +186,8 @@ public class WindowsGameController extends Gui {
         // Définir un message sur le nombre de joueurs
         idGameLabel.setText("id de la partie: " + idGame);
         nbPlayer.setText("en attente de joueurs");
+
+        EventManager.getInstance().publish(NAMEPUBLISH, "RESUME:$");
     }
 
     /**
@@ -376,25 +385,89 @@ public class WindowsGameController extends Gui {
                 deck.get(carte).activate(); // Active la carte
     }   
 
-    // Montre quelle carte vient d'être joué
+    /**
+     * Affiche et anime la carte jouée en la déplaçant depuis la main du joueur
+     * vers la position de l'image correspondante dans le dépôt.
+     *
+     * La conversion des coordonnées est effectuée pour que la carte aille exactement
+     * vers cardDumpImg.get(indexCardDump).
+     *
+     * @param carteJouer le nom (ou identifiant) de la carte jouée
+     */
     private void addCardOnGame(String carteJouer) {
-        cardDumpImg.get(indexCardDump).setImage(new Image(getClass().getResource(prefix + carteJouer + suffix).toExternalForm()));
-        indexCardDump++;
+        // Récupérer le FlowPane correspondant au joueur actuel
+        FlowPane mainJoueur = joueurDispatch.get(noFirstPlayer);
 
-        // Si on ajoute la 4ème et dernière carte, on laisse le temps à tout le monde de la voir
-        if (indexCardDump == 4) {
-            PauseTransition pause = new PauseTransition(Duration.millis(800));
-            pause.setOnFinished(event -> clearCardDump()); // Vide le dépôt après 1s
-            pause.play();
-        }
+        // Création d'une ImageView temporaire pour l'animation
+        ImageView carteAnimee = new ImageView(new Image(getClass().getResource(prefix + carteJouer + suffix).toExternalForm()));
+        carteAnimee.setFitWidth(60);
+        carteAnimee.setFitHeight(125);
+        carteAnimee.setPreserveRatio(true);
+
+        // Positionner la carte au niveau du joueur (en supposant que mainJoueur et mainPane sont dans le même système de coordonnées)
+        double startX = mainJoueur.getLayoutX() + mainJoueur.getWidth() / 2;
+        double startY = mainJoueur.getLayoutY() + mainJoueur.getHeight() / 2;
+        carteAnimee.setLayoutX(startX);
+        carteAnimee.setLayoutY(startY);
+        mainPane.getChildren().add(carteAnimee);
+
+        // Convertir la position de la cible (cardDumpImg) dans le système de coordonnées de mainPane
+        Point2D targetScene = cardDumpImg.get(indexCardDump).localToScene(0, 0);
+        Point2D targetInMainPane = mainPane.sceneToLocal(targetScene);
+
+        double targetX = targetInMainPane.getX();
+        double targetY = targetInMainPane.getY();
+
+        // Calculer le décalage entre la position de départ et la position cible
+        double deltaX = targetX - carteAnimee.getLayoutX();
+        double deltaY = targetY - carteAnimee.getLayoutY();
+
+        // Animation de déplacement vers la position cible
+        TranslateTransition transition = new TranslateTransition(Duration.millis(500), carteAnimee);
+        transition.setToX(deltaX);
+        transition.setToY(deltaY);
+
+        // Une fois l'animation terminée, mettre à jour l'affichage définitif et envoyer le message RESUME après une pause éventuelle
+        transition.setOnFinished(event -> {
+            // Met à jour l'image définitive dans le dépôt
+            cardDumpImg.get(indexCardDump).setImage(
+                new Image(getClass().getResource(prefix + carteJouer + suffix).toExternalForm())
+            );
+            mainPane.getChildren().remove(carteAnimee); // Supprime l'animation temporaire
+            indexCardDump++;
+
+            if (indexCardDump == 4) {
+                // Si c'est la 4ème carte, attendre 800ms avant de vider le dépôt et publier RESUME
+                PauseTransition pause = new PauseTransition(Duration.millis(700));
+                pause.setOnFinished(e -> {
+                    clearCardDump();
+                    EventManager.getInstance().publish(NAMEPUBLISH, "RESUME:$");
+                });
+                pause.play();
+            }
+            else {
+                // Pour les autres cartes, une courte pause de 50ms avant de publier RESUME
+                PauseTransition courtePause = new PauseTransition(Duration.millis(50));
+                courtePause.setOnFinished(e -> {
+                    EventManager.getInstance().publish(NAMEPUBLISH, "RESUME:$");
+                });
+                courtePause.play();
+            }
+        });
+
+        // Met à jour le numéro du prochain joueur
+        noFirstPlayer = (noFirstPlayer + 1) % 4;
+        transition.play();
     }
 
+    // Nettoie le dépôt de carte
     private void clearCardDump() {
         for (int i = 0; i < cardDumpImg.size(); i++)
             cardDumpImg.get(i).setImage(null);
 
         indexCardDump = 0;
     }
+
 
 
     public static void setIdGame(String idG) {

@@ -73,6 +73,8 @@ public class GameManager {
         // Commande pour la comunication arrivant de la GUI
         COMMANDMAPClIENT.put("AtoutChoisi", this::setAtout);
         COMMANDMAPClIENT.put("CardPlay", this::onCardPlay);
+        COMMANDMAPClIENT.put("RESUME", unused -> resume());
+
     }
 
 
@@ -179,6 +181,10 @@ public class GameManager {
     private void onCardPlay(String carte) {
         System.out.println("je viens de jouer "+carte);
         ServerConnection.getInstance().sendToServer(carte); // Envoie au serveur sous forme de chaîne
+    }
+
+    private void resume() {
+        ServerConnection.getInstance().sendToServer("RESUME");
     }
 
 

@@ -5,7 +5,6 @@ package src.main;
  * Un pli est une collection de 4 cartes jouées par les joueurs.
  */
 public class Plis {
-    
     private Paquet.Carte[] plis = new Paquet.Carte[4]; // Tableau des cartes du pli
     private int index = 0;  // Position d'insertion dans le tableau
     private Paquet.Carte powerfullCard = null; // Carte la plus forte du pli
@@ -66,9 +65,8 @@ public class Plis {
      */
     public int getValue() {
         int sum = 0;
-        for(int i = 0; i < plis.length; i++) {
-            sum += plis[i].getNbPoint();
-        }
+        for(int i = 0; i < plis.length; i++) sum += plis[i].getNbPoint();
+
         return sum;
     }
 
@@ -76,9 +74,8 @@ public class Plis {
      * Réinitialise le pli pour une nouvelle manche.
      */
     public void reset() {
-        for(int i = 0; i < plis.length; i++) {
-            plis[i] = null;
-        }
+        for(int i = 0; i < plis.length; i++) plis[i] = null;
+
         index = 0;
         maitre = null;
         powerfullCard = null;
