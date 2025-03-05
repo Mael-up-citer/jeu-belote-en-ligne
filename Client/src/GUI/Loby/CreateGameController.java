@@ -297,16 +297,14 @@ public class CreateGameController extends Gui {
             System.out.println(message);
             ServerConnection.getInstance().sendToServer(message.toString());
         }
-        else
-            errorLabel.setText("Erreur les équipes ne sont pas remplie");
+        else errorLabel.setText("Erreur les équipes ne sont pas remplie");
     }
 
     private String getPlayerInfo(Node node) {
         try {
-            if (node instanceof Button) // Si c'est un joueur humain
-                return "humain";
-            else
-                return ""+((ComboBox<?>) node).getValue();
+            // Si c'est un joueur humain
+            if (node instanceof Button) return "humain";
+            else return ""+((ComboBox<?>) node).getValue();
         } catch (Exception e) {
             System.out.println(e.getMessage());
             return null;

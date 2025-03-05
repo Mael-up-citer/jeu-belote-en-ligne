@@ -161,11 +161,7 @@ public class WindowsGameController extends Gui {
 
         // Initialise la map de dispatch
         joueurDispatch = new HashMap<>();
-        joueurDispatch.put(noPlayer, Mycadre);
-        joueurDispatch.put((noPlayer+1)%4, leftCadre);
-        joueurDispatch.put((noPlayer+2)%4, frontCadre);
-        joueurDispatch.put((noPlayer+3)%4, rightCadre);
-        noFirstPlayer = 1; // Le tout 1er joueur est le 1er
+
 
         // Initialisation de la liste pour contenir toutes les images des cartes jouer au fils des tours
         cardDumpImg = new ArrayList<>();
@@ -217,9 +213,16 @@ public class WindowsGameController extends Gui {
     /**
      * Retire l'effet d'assombrissement et réactive l'intéraction avec mainPane
      */
-    private void onGameStart(String noPlayer) {
+    private void onGameStart(String noply) {
         try {
-            this.noPlayer = Integer.parseInt(noPlayer);
+            this.noPlayer = Integer.parseInt(noply);
+
+            joueurDispatch.put(noPlayer, Mycadre);
+            joueurDispatch.put((noPlayer+1)%4, leftCadre);
+            joueurDispatch.put((noPlayer+2)%4, frontCadre);
+            joueurDispatch.put((noPlayer+3)%4, rightCadre);
+            noFirstPlayer = 1; // Le tout 1er joueur a jouer est le 1
+
         } catch (Exception e) {
         }
 
@@ -437,7 +440,7 @@ public class WindowsGameController extends Gui {
             indexCardDump++;
 
             if (indexCardDump == 4) {
-                // Si c'est la 4ème carte, attendre 800ms avant de vider le dépôt et publier RESUME
+                // Si c'est la 4ème carte, attendre 700ms avant de vider le dépôt et publier RESUME
                 PauseTransition pause = new PauseTransition(Duration.millis(700));
                 pause.setOnFinished(e -> {
                     clearCardDump();

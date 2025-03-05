@@ -88,7 +88,7 @@ public class Game implements Runnable {
                 huitPlis();
                 updateScore();
                 indexDonne = (indexDonne+1) % joueurs.length; // Après chaque 8 plis on avance dans la donne
-                premierJoueur = indexDonne+1;
+                premierJoueur = (indexDonne+1) % joueurs.length;
             }
         } catch (Exception e) {
             e.printStackTrace();

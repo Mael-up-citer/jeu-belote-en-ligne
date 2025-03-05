@@ -160,9 +160,9 @@ public class Server {
             String[] input = str.split(";");
             Equipe equipe1 = new Equipe();
             Equipe equipe2 = new Equipe();
-            int k = 0;  // Ind d'accès dans la liste des sockets
+            int k = 0;  // Index d'accès dans la liste des sockets
             int j = 0;   // numero du bot courant
-
+/*
             // Remplie l'equipe 1
             for (int i = 0; i < 2; i++) {
                 if (input[i].startsWith("humain")) {
@@ -176,6 +176,29 @@ public class Server {
             }
             // Remplie l'equipe 2
             for (int i = 2; i < 4; i++) {
+                if (input[i].startsWith("humain")) {
+                    equipe2.addJoueur(new Humain("Joueur"+k, sockets.get(k).socket, sockets.get(k).in, sockets.get(k).out));
+                    k++;
+                }
+                else {
+                    equipe2.addJoueur(BotFactory.creeBot("Bot"+j, input[i]));
+                    j++;
+                }
+            }
+*/
+            // Remplie les équipes 
+            for (int i = 0; i < 4; i++) {
+                if (input[i].startsWith("humain")) {
+                    equipe1.addJoueur(new Humain("Joueur"+k, sockets.get(k).socket, sockets.get(k).in, sockets.get(k).out));
+                    k++;
+                }
+                else {
+                    equipe1.addJoueur(BotFactory.creeBot("Bot"+j, input[i]));
+                    j++;
+                }
+
+                i++;
+
                 if (input[i].startsWith("humain")) {
                     equipe2.addJoueur(new Humain("Joueur"+k, sockets.get(k).socket, sockets.get(k).in, sockets.get(k).out));
                     k++;
