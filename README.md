@@ -23,7 +23,7 @@ Ce projet est un jeu de **Belote en ligne** développé en Java dans le cadre d'
 ## Technologies utilisées
 
 - **Langage** : Java
-- **Bibliothèque pour l'UI** : JavaFX (ou Swing si préféré)
+- **Bibliothèque pour l'UI** : JavaFX
 - **Communication réseau** : Sockets TCP/IP
 - **Logique de jeu** : Implémentation des règles de la Belote avec gestion des enchères et des tours de jeu.
 - **IA** : Algorithmes d'intelligence artificielle pour la prise de décision basée sur les cartes disponibles et les stratégies possibles.
@@ -37,14 +37,9 @@ Ce projet est un jeu de **Belote en ligne** développé en Java dans le cadre d'
 
 2. Assurez-vous d'avoir **Java 8 ou supérieur** installé sur votre machine.
 
-3. Compilez le projet en utilisant Maven (ou Gradle si vous préférez) :
+3. Compilez et lancer le projet en utilisant bash :
    ```bash
-   mvn install
-   ```
-
-4. Exécutez l'application avec la commande suivante :
-   ```bash
-   mvn exec:java
+   ./compile
    ```
 
 ## Utilisation
@@ -55,7 +50,7 @@ Avant de jouer en ligne, vous devez démarrer un serveur pour gérer les connexi
 
 1. Exécutez la classe `Serveur` pour démarrer le serveur en écoute des connexions des joueurs :
    ```bash
-   java Serveur
+   ./compile
    ```
 
 2. Le serveur gérera les connexions des joueurs, les échanges de données et la synchronisation des parties.
@@ -64,10 +59,8 @@ Avant de jouer en ligne, vous devez démarrer un serveur pour gérer les connexi
 
 Pour démarrer une session de jeu en tant que joueur, exécutez la classe `Client` :
 ```bash
-java Client
+./compile
 ```
-
-L'application vous demandera de vous connecter à un serveur existant (indiquez l'adresse IP et le port).
 
 Vous pouvez également choisir de jouer contre l'IA en sélectionnant l'option correspondante dans le menu.
 
@@ -81,22 +74,6 @@ Lors de la configuration de la partie, vous pourrez choisir entre trois niveaux 
 
 L'IA choisira ses actions en fonction du niveau sélectionné.
 
-## Structure du projet
-
-```
-.
-├── src/
-│   ├── com/
-│   │   ├── projetbelote/
-│   │   │   ├── serveur/
-│   │   │   ├── client/
-│   │   │   ├── jeu/
-│   │   │   └── ia/
-│   │   ├── ui/
-│   └── Main.java
-├── pom.xml
-└── README.md
-```
 
 ## Contribuer
 
@@ -110,8 +87,7 @@ Les contributions sont les bienvenues ! Si vous souhaitez améliorer le projet, 
 
 ## Auteurs
 
-- [Votre nom] - Développeur principal
-- [Autres contributeurs] - Contributeurs
+- Maël Lecene - Développeur principal et unique
 
 ## License
 
